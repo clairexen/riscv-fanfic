@@ -1,5 +1,5 @@
-A proposal for a RISC-V posit extension
-=======================================
+Proposal for a RISC-V Posit Extension
+=====================================
 
 **DISCLAIMERS**
 

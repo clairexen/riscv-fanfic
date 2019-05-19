@@ -13,22 +13,22 @@ Design goals:
 
 We define five instruction formats: "prefix", "load-immediate", "jump-and-link", "compressed-packed", and "packed".
 
-    |              4                    |  3                   2        |          1                    |
-    |7 6 5 4 3 2 1 0 1 0 9 8 7 6 5 4 3 2|1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
-    ----------------------------------------------------------------------------------------------------|
-   ...       funct7   |   rs2   |   rs1   |  f3 |    rd   |     opcode    | len | 00|page | 00|  11111  | prefix format
-   ...                               immediate                          |f| len |ssp| rd^ |spc|  11111  | load-immediate format
-   ...                               immediate                          |f| len |ssp| rd  |spc|  11111  | jump-and-link format
-   ...           immediate              |      funct9     | rs2'| f2| rs1'| len |ssp| rd' |spc|  11111  | compressed-packed format
-   ...           immediate              |    funct7   |   rs2   |   rs1   | len |    rd   |spc|  11111  | packed format
+     |              4                    |  3                   2        |          1                    |
+     |7 6 5 4 3 2 1 0 1 0 9 8 7 6 5 4 3 2|1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
+     ----------------------------------------------------------------------------------------------------|
+    ...       funct7   |   rs2   |   rs1   |  f3 |    rd   |     opcode    | len | 00|page | 00|  11111  | prefix format
+    ...                               immediate                          |f| len |ssp| rd^ |spc|  11111  | load-immediate format
+    ...                               immediate                          |f| len |ssp| rd  |spc|  11111  | jump-and-link format
+    ...           immediate              |      funct9     | rs2'| f2| rs1'| len |ssp| rd' |spc|  11111  | compressed-packed format
+    ...           immediate              |    funct7   |   rs2   |   rs1   | len |    rd   |spc|  11111  | packed format
 
 
 For comparison, the standard 32-bit format:
 
-                                        |  3                   2        |          1                    |
-                                        |1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
-                                        |---------------------------------------------------------------|
-                                        |    funct7   |   rs2   |   rs1   |  f3 |    rd   |    opcode   | 32-bit format
+                                         |  3                   2        |          1                    |
+                                         |1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
+                                         |---------------------------------------------------------------|
+                                         |    funct7   |   rs2   |   rs1   |  f3 |    rd   |    opcode   | 32-bit format
 
 
 Organization of the encoding space
@@ -123,7 +123,7 @@ being able to load them into s0/s1.
 
 
 
-
+```
 ==============================================================================
 
                                    APPENDIX
@@ -131,6 +131,7 @@ being able to load them into s0/s1.
      Everything below is additional remarks and not part of the proposal
 
 ==============================================================================
+```
 
 
 Appendix I: (Un)frequently Asked Questions
@@ -180,22 +181,22 @@ Load-large-immediate and long JALR
 The above instruction format is set up to support efficient encodings for
 load-immediate and jump-and-link instructions.
 
-            |          1                    |
-     9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
-    ----------------------------------------|
-   ... imm  |E| len | 01| rd^ | 00|  11111  | LLI.{32,48,64,80}
-   ... imm  |E| len | 10| rd  | 00|  11111  | LJAL.{32,48,64,80}
-   ... imm  |0| len | 11| rd^ | 00|  11111  | LFI.{S,D}
+             |          1                    |
+      9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
+     ----------------------------------------|
+    ... imm  |E| len | 01| rd^ | 00|  11111  | LLI.{32,48,64,80}
+    ... imm  |E| len | 10| rd  | 00|  11111  | LJAL.{32,48,64,80}
+    ... imm  |0| len | 11| rd^ | 00|  11111  | LFI.{S,D}
 
 LLI/LJAL extend their immediate with E to XLEN. Therefore the 48-bit LJAL.32
 instruction can jump +/- 4GB.
 
-LFI.S is a 48-bit instruction that loads an IEEE float32 immediate. If FLEN>32
-then the immediate is NaN-boxed before storing it in the f* register rd.
+LFI.S is a 48-bit instruction that loads an IEEE float32 immediate. If `FLEN>32`
+then the immediate is NaN-boxed before storing it in the `f*` register rd.
 
 Similarly, LFI.D is an 80-bit instruction that loads an IEEE float64 immediate.
 
-LJAL instructions are only valid if imm[0] is zero. (imm[1:0] when IALIGN=32.)
+LJAL instructions are only valid if `imm[0]` is zero. (`imm[1:0]` when `IALIGN=32`.)
 
 (LLI = load large immediate, LJAL = long jump and link, LFI = load float immediate)
 
@@ -231,7 +232,7 @@ such as the following (bfxp = bitfield extract and place):
 With start, length, dest being 7-bit immediate arguments.
 (For future-compatibility with RV128, all three arguments must be 7 bits wide.)
 
-So this instruction would have 3*7=21 immediate bits, too large for a 32-bit
+So this instruction would have `3*7=21` immediate bits, too large for a 32-bit
 instruction. But it could be easy implemented as 64-bit prefix-type instruction:
 
     |      6                   5    |              4                |  3                   2        |          1                    |
@@ -298,18 +299,18 @@ Note that with this format, AVL still needs to be set with vsetvl{i}.
 Appendix III: Instructions >96-bits
 ===================================
 
-The above encoding only encodes for instructions up to 96-bit, but reserves len=111
-and op=11 for longer instructions.
+The above encoding only encodes for instructions up to 96-bit, but reserves `len=111`
+and `op=11` for longer instructions.
 
-We can easily define a prefix format for larger instructions, with instr[11:7]
-encoding for the length, where instruction length in bits = 112 + 16*length.
+We can easily define a prefix format for larger instructions, with `instr[11:7]`
+encoding for the length, where instruction length in `bits = 112 + 16*length`.
 
-    |              4                    |  3                   2        |          1                    |
-    |7 6 5 4 3 2 1 0 1 0 9 8 7 6 5 4 3 2|1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
-    ----------------------------------------------------------------------------------------------------|
-   ...       funct7   |   rs2   |   rs1   |  f3 |    rd   |     opcode    | 111 |  length | 11|  11111  |
+     |              4                    |  3                   2        |          1                    |
+     |7 6 5 4 3 2 1 0 1 0 9 8 7 6 5 4 3 2|1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
+     ----------------------------------------------------------------------------------------------------|
+    ...       funct7   |   rs2   |   rs1   |  f3 |    rd   |     opcode    | 111 |  length | 11|  11111  |
 
-If length=31 is reserved for even longer instructions then this scheme would
+If `length=31` is reserved for even longer instructions then this scheme would
 encode for instructions of up to 592 bits length (74 bytes).
 
 In this scheme there would be no packed format, load-immediate format, or jump-and-link format for

@@ -86,25 +86,24 @@ We allocate one minor opcode and add the following instructions:
     |  3                   2        |          1                    |
     |1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
     |---------------------------------------------------------------|
-    |   00000 | 00|   rs2   |   rs1   |  f3 |    rd   |    opcode   | AUXSLN
-    |   00001 | 00|  00000  |   rs1   |  f3 |    rd   |    opcode   | AUXGLN
-    |   00010 | 00|  00000  |   rs1   |  f3 |    rd   |    opcode   | AUXNXT
-    |  offset | 01|   rs2   |   rs1   |  f3 |    rd   |    opcode   | AUXWR
-    |  offset | 10|  00000  |   rs1   |  f3 |    rd   |    opcode   | AUXRD
-    |  offset | 11|   rs2   |   rs1   |  f3 |    rd   |    opcode   | AUXFUN
+    | offset| 000 |   rs2   |   rs1   |  f3 |    rd   |    opcode   | AUXSLN
+    | offset| 001 |  00000  |   rs1   |  f3 |    rd   |    opcode   | AUXGLN
+    | offset| 010 |  00000  |   rs1   |  f3 |    rd   |    opcode   | AUXNXT
+    | offset| 011 |   rs2   |   rs1   |  f3 |    rd   |    opcode   | AUXFUN
+    | offset| 100 |   rs2   |   rs1   |  f3 |    rd   |    opcode   | AUXWR
+    | offset| 101 |  00000  |   rs1   |  f3 |    rd   |    opcode   | AUXRD
 
 An implementation that implements Xaux, but not a single extension using
 Xaux, would simply write zero to rd for all those instructions.
 
-All above instructions accept an "auxiliary state address" in `rs1`, or
-`rs1+offset` for the instructions with offset field. An implementation may
-use only an implementation-defined number of LSB bits of that address and
-ignore all upper bits.
+All above instructions accept an "auxiliary state address" in rs1+offset.
+An implementation may use only an implementation-defined number of LSB bits of
+that address and ignore all upper bits.
 
-An ISA extension adding auxiliary stateful functions may must define one
-or more *auxiliary state regions*, that consist of a *base address*
-and a *region size*. Regions must be non-overlapping. The zero address
-must be guaranteed to never be part of a region.
+An ISA extension adding auxiliary stateful functions must define one or more
+*auxiliary state regions*, that consist of a *base address* and a *region
+size*. Regions must be non-overlapping. The zero address must be guaranteed to
+never be part of a region.
 
 AUXSLN, with a base address in rs1 and a requested effective region length in
 rs2, will *enable* the region if rs2 is nonzero, and *disable* the region if
@@ -130,10 +129,10 @@ When rs1 has a zero value then the first base address is returned. When rs1 cont
 the address of the last base address then zero is returned. This mechanism does not
 need to return regions order of increasing base address.
 
+AUXFUN has function-defined behavior.
+
 AUXWR and AUXRD write-to and read-from the address specified in rs1+offset
 respectively.
-
-AUXFUN have function-defined behavior.
 
 Using any of those functions on an address outside of a region will simply
 write zero to rd.

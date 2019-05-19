@@ -122,6 +122,7 @@ Being able to load immediates into t1/t2 would presumably be more useful than
 being able to load them into s0/s1.
 
 
+----
 
 ```
 ==============================================================================

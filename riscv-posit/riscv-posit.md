@@ -1,13 +1,13 @@
 A proposal for a RISC-V posit extension
 =======================================
 
-DISCLAIMERS:
+**DISCLAIMERS**
 
-This proposal is meant as a basis for further discussion about adding posit
-support to RISC-V. It will be subject to change.
+**This proposal is meant as a basis for further discussion about adding posit
+support to RISC-V. It will be subject to change.**
 
-There is a separate RISC-V posit proposal on posithub.org. This is completely
-independent from the work in this document.
+**There is a separate RISC-V posit proposal on posithub.org. This is completely
+independent from the work in this document.**
 
 
 Introduction
@@ -16,9 +16,9 @@ Introduction
 Posits are an alternative floating point format that provides a few bits more
 precision than IEEE float, at least for fairly normalized values.
 
-https://posithub.org/docs/BeatingFloatingPoint.pdf
-https://posithub.org/docs/posit_standard.pdf
-https://www.youtube.com/watch?v=N05yYbUZMSQ
+- https://posithub.org/docs/BeatingFloatingPoint.pdf
+- https://posithub.org/docs/posit_standard.pdf
+- https://www.youtube.com/watch?v=N05yYbUZMSQ
 
 This proposal coveres 3 different types of instructions:
 

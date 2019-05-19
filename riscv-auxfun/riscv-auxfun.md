@@ -74,6 +74,10 @@ extensions based on Xaus. Those additional extensions are only described
 for illustrative purposes. They are not meant to be actual ISA extension
 proposals as-is.
 
+Xaux is an extension enabling other extensions. We use the term
+*function-defined* for details that must be specified by those other extensions
+that build ontop of Xaux.
+
 The base Xaux extension
 -----------------------
 
@@ -153,6 +157,7 @@ one figures out the size of memory require to hold the state (ret=a0):
       AUXNXT a1, a1
       BNEZ a1, loop
     done:
+      RET
 
 The second sweep saves the state (dst=a0, on RV32) and disables all
 aux regions:

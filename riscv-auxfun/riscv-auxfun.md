@@ -1,33 +1,24 @@
-RISC-V Proposal for Stateful Auxiliary Functions
-================================================
+RISC-V Auxiliary Accelerator Proposal
+=====================================
 
-**DISCLAIMER: This proposal is meant as a basis for further discussion about
+**DISCLAIMER: This proposal is meant as a basis for further discussions about
 this topic area. It will be subject to change.**
 
 This document is structured in two part:
 
-Part 1 is a problem statement, explaining why I think RISC-V would benefit from
-an ISA extension that makes it easy to add "auxiliary state" to RISC-V as part
-of (custom) extension, and manage that state in an extension-agnostic way.
+Part 1 is a problem statement, explaining certain RISC-V extensions would
+greatly benefit from adding (sometime large) additional state to the ISA, and
+why it would be a good idea to manage this additional state via a unfirom
+extension-agnostic interface.
 
 Part2 is my proposed solution to the problem described in part 1.
 
+Part 3 discusses a possible standard hardware interface that could be used to
+create portable accelerator IPs that works with many different RISC-V cores.
 
-Part 1: Why some auxiliary functions require auxiliary state
-============================================================
 
-In this document, I am using the term "auxiliary functions" to refer to any
-instructions an ISA extension may add, that implements a pure function that
-only uses the values from it's source registers (and parameters included in the
-instruction word) as inputs, and only writes the destination register as
-output.
-
-Im using the term "stateful auxiliary functions" for added instructions that
-also read/write some additional state that has been added to the ISA alongside
-the new instructions.
-
-This proposal is all about how to manage such an added state in a uniform
-and extension-agnostic manner.
+Part 1: Auxiliary functions and auxiliary state
+===============================================
 
 Motivating example: SHA-3
 -------------------------
@@ -69,103 +60,75 @@ Part 2: The RISC-V Auxiliary Stateful Function Proposal (Xaux)
 ==============================================================
 
 This chapter first defines a base Xaux extension, and then provides examples
-for how the motivating examples above could be implemented in additional
-extensions based on Xaus. Those additional extensions are only described
+for how the motivating examples above could be implemented with RISC-V
+extensions based on Xaux. Those additional extensions are only described
 for illustrative purposes. They are not meant to be actual ISA extension
 proposals as-is.
 
-Xaux is an extension enabling other extensions. We use the term
-*function-defined* for details that must be specified by those other extensions
-that build ontop of Xaux.
+Xaux is an extension enabling other extensions. We use the term *extension*
+when referring to the extensions enabled by Xaux, and we use *Xaux* when
+referring to the Xaux extension itself. We further use the term
+*extension-defined* for details that must be defined by those extensions.
+
+Each region has a variable *state length* (SL), that can be read with AUXGETSL
+and updated with AUXSETSL. Saving/restoring SL and the first SL elements of a
+region must be sufficient to completely restore the state of a region. Reading
+and writing the first SL elements of a region must be free of side-effects.
 
 The base Xaux extension
 -----------------------
+
+The Xaux extension defines a new addres space, separate from memory addresses,
+CSRs, and ISA registers. This address space addresses individual XLEN-sized
+words, similar to the CSR space. We call this the *Xaux register file*.
+
+An extension must define one or more *Xaux regions*, i.e. a base address and a
+size. The region size should be a power of two and the region should be
+naturally aligned to its size.
+
+The AUXGETSL, AUXSETSL, and AUXNEXT instructions below operate on regions
+and the region base address is used to specify a region.
 
 We allocate one minor opcode and add the following instructions:
 
     |  3                   2        |          1                    |
     |1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
     |---------------------------------------------------------------|
-    | offset| 000 |   rs2   |   rs1   |  f3 |    rd   |    opcode   | AUXSLN
-    | offset| 001 |  00000  |   rs1   |  f3 |    rd   |    opcode   | AUXGLN
-    | offset| 010 |  00000  |   rs1   |  f3 |    rd   |    opcode   | AUXNXT
-    | offset| 011 |   rs2   |   rs1   |  f3 |    rd   |    opcode   | AUXFUN
-    | offset| 100 |   rs2   |   rs1   |  f3 |    rd   |    opcode   | AUXWR
-    | offset| 101 |  00000  |   rs1   |  f3 |    rd   |    opcode   | AUXRD
+    | 000 |  0000 |  00000  |   rs1   |  f3 |    rd   |    opcode   | AUXGETSL
+    | 000 |  0001 |  00000  |   rs1   |  f3 |    rd   |    opcode   | AUXNEXT
+    | off |  0010 |  00000  |   rs1   |  f3 |    rd   |    opcode   | AUXRD
+    | off |  0100 |  00000  |   rs1   |  f3 |    rd   |    opcode   | AUXRD.S
+    | off |  0101 |  00000  |   rs1   |  f3 |    rd   |    opcode   | AUXRD.D
+    | off |  0110 |  00000  |   rs1   |  f3 |    rd   |    opcode   | AUXRD.Q
+    | off |  0111 |  00000  |   rs1   |  f3 |    rd   |    opcode   | AUXRD.V
+    |---------------------------------------------------------------|
+    | 000 |  1000 |   rs2   |   rs1   |  f3 |  00000  |    opcode   | AUXSETSL
+    | off |  1010 |   rs2   |   rs1   |  f3 |  00000  |    opcode   | AUXWR
+    | off |  1100 |   rs2   |   rs1   |  f3 |  00000  |    opcode   | AUXWR.S
+    | off |  1101 |   rs2   |   rs1   |  f3 |  00000  |    opcode   | AUXWR.D
+    | off |  1110 |   rs2   |   rs1   |  f3 |  00000  |    opcode   | AUXWR.Q
+    | off |  1111 |   rs2   |   rs1   |  f3 |  00000  |    opcode   | AUXWR.V
 
-An implementation that implements Xaux, but not a single extension using
-Xaux, would simply write zero to rd for all those instructions.
+The instructions with an offset (off) field operate on the Xaux address
+`rs1+off`. The remaining instructions operate on `rs1`. The offset is unsigned.
 
-All above instructions accept an "auxiliary state address" in rs1+offset.
-An implementation may use only an implementation-defined number of LSB bits of
-that address and ignore all upper bits.
+The offset helps eliminating ADDI instructions in code that copies multiple
+words between GPRs and Xaux registers, or unrolled code that copies data
+between memory and Xaux registers.
 
-An ISA extension adding auxiliary stateful functions must define one or more
-*auxiliary state regions*, that consist of a *base address* and a *region
-size*. Regions must be non-overlapping. The zero address must be guaranteed to
-never be part of a region.
+AUXRD and AUXWR read/write the Xaux register at `rd1+off`.
 
-AUXSLN, with a base address in rs1 and a requested effective region length in
-rs2, will *enable* the region if rs2 is nonzero, and *disable* the region if
-rs2 is zero. The actual effective region length is returned in rd. The
-requested effective region length maps to actual effective region length using
-a function-defined method, that's a pure function of the requested length
-and implementation-defined constants.
+On RV32:
+- AUXWR.S and AUXWR.S behave like AUXRD and AUXWR, but rs2/rd is a floating point
+  register.
+- AUXRD.D and AUXWR.D address two consequtive, naturally aligned Xaux registers.
+- AUXRD.Q and AUXWR.Q address four consequtive, naturally aligned Xaux registers.
 
-Decreasing the actual effective region length will effectively zero-out the
-disabled words, and they will stay zeroed-out until the effective region length
-is increased again.
+On RV64:
+- AUXWR.S, AUXWR.S, AUXRD.D, and AUXWR.D behave like AUXRD and AUXWR, but rs2/rd
+  is a floating point register.
+- AUXRD.Q and AUXWR.Q address two consequtive, naturally aligned Xaux registers.
 
-An extension may provide "alternative views" to their auxiliary state at
-addresses beyond the effective region length.
-
-AUXGLN, with a base address in rs1, returns the current effective region length.
-
-Executing AUXSLN or AUXGLN on an address that is not a base address has
-function-defined behavior.
-
-AUXNXT with a base address is rs1 will return the base address for the next region.
-When rs1 has a zero value then the first base address is returned. When rs1 contains
-the address of the last base address then zero is returned. This mechanism does not
-need to return regions order of increasing base address.
-
-AUXFUN has function-defined behavior.
-
-AUXWR and AUXRD write-to and read-from the address specified in rs1+offset
-respectively.
-
-Using any of those functions on an address outside of a region will simply
-write zero to rd.
-
-Using AUXNXT with an address that is not a base address will also simply write
-zero to rd.
-
-Context save/restore
---------------------
-
-Saving the current context performs two sweeps using AUXNXT. The first
-one figures out the size of memory require to hold the state (ret=a0):
-
-      LI a0, 1
-      AUXNXT a1, zero
-      BEQZ a1, done
-    loop:
-      AUGGLN a2, a1
-      ADDI a0, a0, 2
-      ADD a0, a0, a3
-      AUXNXT a1, a1
-      BNEZ a1, loop
-    done:
-      RET
-
-The second sweep saves the state (dst=a0, on RV32) and disables all
-aux regions:
-
-    TBD
-
-And finally restoring the state (src=a0):
-
-    TBD
-
-The offset parameter to AUXWR and AUXRD helps increase the performance when
-unrolling those loops.
+Finally, AUXRD.V and AUXWR.V read/write AVL words from/to a vector register
+rs2/rd.  If `SEW/EDIV > XLEN` then the instructions address blocks of
+consecutive, naturally aligned Xaux registers.

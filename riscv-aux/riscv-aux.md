@@ -1,5 +1,5 @@
-RISC-V Auxiliary Accelerator Proposal
-=====================================
+RISC-V Auxiliary State Proposal
+===============================
 
 **DISCLAIMER: This proposal is meant as a basis for further discussions about
 this topic area. It will be subject to change.**
@@ -8,7 +8,7 @@ This document is structured in two part:
 
 Part 1 is a problem statement, explaining certain RISC-V extensions would
 greatly benefit from adding (sometime large) additional state to the ISA, and
-why it would be a good idea to manage this additional state via a unfirom
+why it would be a good idea to manage this additional state via a uniform
 extension-agnostic interface.
 
 Part2 is my proposed solution to the problem described in part 1.
@@ -56,8 +56,8 @@ Requirements for ISA-extension for managing auxiliary state
 TBD
 
 
-Part 2: The RISC-V Auxiliary Stateful Function Proposal (Xaux)
-==============================================================
+Part 2: The RISC-V Auxiliary State Proposal (Xaux)
+==================================================
 
 This chapter first defines a base Xaux extension, and then provides examples
 for how the motivating examples above could be implemented with RISC-V
@@ -130,5 +130,11 @@ On RV64:
 - AUXRD.Q and AUXWR.Q address two consequtive, naturally aligned Xaux registers.
 
 Finally, AUXRD.V and AUXWR.V read/write AVL words from/to a vector register
-rs2/rd.  If `SEW/EDIV > XLEN` then the instructions address blocks of
+rs2/rd.  If `SEW/EDIV > XLEN` then the instructions addresses blocks of
 consecutive, naturally aligned Xaux registers.
+
+
+Part 3: The RISC-V Auxiliary Function Interface
+===============================================
+
+TBD

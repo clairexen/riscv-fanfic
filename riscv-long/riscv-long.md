@@ -17,7 +17,7 @@ We define five instruction formats: "prefix", "load-immediate", "jump-and-link",
      |7 6 5 4 3 2 1 0 1 0 9 8 7 6 5 4 3 2|1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
      ----------------------------------------------------------------------------------------------------|
     ...       funct7   |   rs2   |   rs1   |  f3 |    rd   |     opcode    | len | 00|page | 00|  11111  | prefix format
-    ...                               immediate                          |f| len |ssp| rd^ |spc|  11111  | load-immediate format
+    ...                               immediate                          |f| len |ssp| rd' |spc|  11111  | load-immediate format
     ...                               immediate                          |f| len |ssp| rd  |spc|  11111  | jump-and-link format
     ...           immediate              |      funct9     | rs2'| f2| rs1'| len |ssp| rd' |spc|  11111  | compressed-packed format
     ...           immediate              |    funct7   |   rs2   |   rs1   | len |    rd   |spc|  11111  | packed format
@@ -97,29 +97,14 @@ and spc=10 are allocated as-needed and stay reserved for now.
 Register encoding in load-immediate, jump-and-link, compressed-packed
 ---------------------------------------------------------------------
 
-compressed-packed instructions use 3-bit rd', rs1', rs2' fields, using
-the same encoding as compressed instructions:
+jump-and-link instructions use 3-bit rd:
+
+    rd := rd[2:0]         (x0-x7, includes zero, ra, t0)
+
+compressed-packed instructions and load-immediate instructions use 3-bit rd',
+rs1', rs2' fields, using the same encoding as compressed instructions:
 
     rx := 8 + rx'[2:0]    (x8-x15, i.e s0-s1, a0-a5)
-
-jump-and-link instructions use 3-bit rd.
-
-    rd := 8 + rd[2:0]    (x0-x7, includes zero, ra, t0)
-
-load-immediate instructions use 3-bit rd^:
-
-    rd := (rd^[2:1] ? 8 : 6) + rd^[2:0]    (x6-x7, x10-x15, i.e. t1-t2, a0-a5)
-
-Decoding this takes only a little bit of extra logic:
-
-    rd[4] := 0
-    rd[3] :=  rd^[2] ||  rd^[1]
-    rd[2] :=  rd^[2] || !rd^[1]
-    rd[1] := !rd^[2] ||  rd^[1]
-    rd[0] :=  rd^[0]
-
-Being able to load immediates into t1/t2 would presumably be more useful than
-being able to load them into s0/s1.
 
 
 ----
@@ -185,9 +170,9 @@ load-immediate and jump-and-link instructions.
              |          1                    |
       9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
      ----------------------------------------|
-    ... imm  |E| len | 01| rd^ | 00|  11111  | LLI.{32,48,64,80}
+    ... imm  |E| len | 01| rd' | 00|  11111  | LLI.{32,48,64,80}
     ... imm  |E| len | 10| rd  | 00|  11111  | LJAL.{32,48,64,80}
-    ... imm  |0| len | 11| rd^ | 00|  11111  | LFI.{S,D}
+    ... imm  |0| len | 11| rd' | 00|  11111  | LFI.{S,D}
 
 LLI/LJAL extend their immediate with E to XLEN. Therefore the 48-bit LJAL.32
 instruction can jump +/- 4GB.

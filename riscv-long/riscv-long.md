@@ -11,7 +11,7 @@ Design goals:
 - Uniform instruction formats that work with a wide range of instructions
   - so we can keep decoder logic simple even when adding loads of instructions over time
 
-We define five instruction formats: "prefix", "load-immediate", "jump-and-link", "compressed-packed", and "packed".
+We define five instruction formats: "prefix", "load-immediate", "jump-and-link", and "packed".
 
      |              4                    |  3                   2        |          1                    |
      |7 6 5 4 3 2 1 0 1 0 9 8 7 6 5 4 3 2|1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
@@ -19,7 +19,6 @@ We define five instruction formats: "prefix", "load-immediate", "jump-and-link",
     ...       funct7   |   rs2   |   rs1   |  f3 |    rd   |     opcode    | len | 00|page | 00|  11111  | prefix format
     ...                               immediate                          |f| len |ssp| rd' |spc|  11111  | load-immediate format
     ...                               immediate                          |f| len |ssp| rd  |spc|  11111  | jump-and-link format
-    ...           immediate              |      funct9     | rs2'| f2| rs1'| len |ssp| rd' |spc|  11111  | compressed-packed format
     ...           immediate              |    funct7   |   rs2   |   rs1   | len |    rd   |spc|  11111  | packed format
 
 
@@ -73,18 +72,14 @@ end of the instruction (or more funct7, if you prefer to see it that way).
 page=111 shall always stay reserved for custom extensions.
 
 
-Load-immediate, jump-and-link, compressed-packed, and packed formats
---------------------------------------------------------------------
+Load-immediate, jump-and-link, and packed formats
+-------------------------------------------------
 
 The remainging subspaces of spc=00 can be used for load-immediate,
-jump-and-link, and compressed-packed instructions.
+and jump-and-link instructions.
 
 A subspace used for load-immediate/jump-and-link can host up to two
 instructions, selected by the "f" field in instr[15].
-
-A subspace used for compressed-packed instructions could host up to 2048
-instructions, selected by funct9 and f2, if none of those instructions
-would want to use any of those bits as additional parameters.
 
 A space used for packed instructions could host up to 128 instructions,
 selected by funct7, if none of those instructions would want to use any of
@@ -94,15 +89,15 @@ Space spc=11 is always used for packed format instructions. Spaces spc=01
 and spc=10 are allocated as-needed and stay reserved for now.
 
 
-Register encoding in load-immediate, jump-and-link, compressed-packed
----------------------------------------------------------------------
+Register encoding in load-immediate, and jump-and-link formats
+--------------------------------------------------------------
 
 jump-and-link instructions use 3-bit rd:
 
     rd := rd[2:0]         (x0-x7, includes zero, ra, t0)
 
-compressed-packed instructions and load-immediate instructions use 3-bit rd',
-rs1', rs2' fields, using the same encoding as compressed instructions:
+load-immediate instructions use 3-bit rd', rs1', rs2' fields, using the same
+encoding as compressed instructions:
 
     rx := 8 + rx'[2:0]    (x8-x15, i.e s0-s1, a0-a5)
 

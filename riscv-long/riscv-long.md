@@ -11,7 +11,7 @@ Design goals:
 - Uniform instruction formats that work with a wide range of instructions
   - so we can keep decoder logic simple even when adding loads of instructions over time
 
-We define five instruction formats: "prefix", "load-immediate", "jump-and-link", and "packed".
+We define five instruction formats: "prefix", "load-immediate", "jump-and-link", and "extended".
 
      |              4                    |  3                   2        |          1                    |
      |7 6 5 4 3 2 1 0 1 0 9 8 7 6 5 4 3 2|1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
@@ -19,7 +19,7 @@ We define five instruction formats: "prefix", "load-immediate", "jump-and-link",
     ...       funct7   |   rs2   |   rs1   |  f3 |    rd   |     opcode    | len | 00|page | 00|  11111  | prefix format
     ...                               immediate                          |f| len |ssp| rd' |spc|  11111  | load-immediate format
     ...                               immediate                          |f| len |ssp| rd  |spc|  11111  | jump-and-link format
-    ...           immediate              |    funct7   |   rs2   |   rs1   | len |    rd   |spc|  11111  | packed format
+    ...           immediate              |    funct7   |   rs2   |   rs1   | len |    rd   |spc|  11111  | extended format
 
 
 For comparison, the standard 32-bit format:
@@ -48,7 +48,7 @@ space for the instruction lengths that already have an encoding.
     |111| reserved instructions >96-bit  (op == 11)
 
 The encoding space under each "len" value is divided into 4 spaces (spc).
-If the space is not used for packed format instructions it is further
+If the space is not used for extended format instructions it is further
 subdivided into 4 subspaces (ssp) each.
 
 
@@ -72,8 +72,8 @@ end of the instruction (or more funct7, if you prefer to see it that way).
 page=111 shall always stay reserved for custom extensions.
 
 
-Load-immediate, jump-and-link, and packed formats
--------------------------------------------------
+Load-immediate, jump-and-link, and extended formats
+---------------------------------------------------
 
 The remainging subspaces of spc=00 can be used for load-immediate,
 and jump-and-link instructions.
@@ -81,11 +81,11 @@ and jump-and-link instructions.
 A subspace used for load-immediate/jump-and-link can host up to two
 instructions, selected by the "f" field in instr[15].
 
-A space used for packed instructions could host up to 128 instructions,
+A space used for extended instructions can host up to 128 instructions,
 selected by funct7, if none of those instructions would want to use any of
 those bits as additional parameters.
 
-Space spc=11 is always used for packed format instructions. Spaces spc=01
+Space spc=11 is always used for extended format instructions. Spaces spc=01
 and spc=10 are allocated as-needed and stay reserved for now.
 
 
@@ -118,32 +118,31 @@ encoding as compressed instructions:
 Appendix I: (Un)frequently Asked Questions
 ==========================================
 
-Q: Why have both the packed and the prefix format? Wouldn't "packed" be
-sufficient? Some of the immediate bits in the packed format could be used to
-distinguish instructions, solving the issue of "packed" providing only limited
+Q: Why have both the extended and the prefix format? Wouldn't "extended" be
+sufficient? Some of the immediate bits in the extended format could be used to
+distinguish instructions, solving the issue of "extended" providing only limited
 encoding space for instructions.
 
 A: In the prefix format page, opcode, and funct3 are all within the 32-bit of
 the instruction word. Thus, assuming funct7 only contains additional arguments
 for the instruction, a prefix-format instruction can be decoded by looking only
-at the first 32-bit of the instruction. If we'd use the packed format only
+at the first 32-bit of the instruction. If we'd use the extended format only
 and distinguish instructions using immediate bits, then the decoder would need
 to look beyond the first 32-bits to decode an instruction.
 
-Q: How to decide if an instruction should be using prefix format or packed
+Q: How to decide if an instruction should be using prefix format or extended
 format?
 
-A: A packed format instruction should be (1) fairly frequent, so that it pays of
+A: A extended format instruction should be (1) fairly frequent, so that it pays of
 to have a 16-bit shorter instruction word and (2) should only occupy one funct7
 value (i.e. only use the immediate field for additional parameters), to ensure
-there's enough space left for other packed instructions. Everything else should
-use the prefix format.
+there's enough space left for other extended instructions.
 
 Q: How many opcodes does the standard 48-bit prefix-format (len=00, spc=00, ssp=00) provide?
 
 A: The equivalent of 2048 major opcodes, or 16384 minor opcodes.
 
-Q: How many opcodes does the standard 48-bit packed-format (len=000, spc=11) provide?
+Q: How many opcodes does the standard 48-bit extended-format (len=000, spc=11) provide?
 
 A: The equivalent of only 1 minor opcode, but with an added 16-bit immediate.
 
@@ -250,7 +249,7 @@ The 4-bit OP field would select the arithmetic operation.
 ------------------------
 
 Based on the current "V" vector extension proposal (https://riscv.github.io/documents/riscv-v-spec/),
-something like the following packed 64-bit instruction could implement OP-V instructions with overrides
+something like the following extended 64-bit instruction could implement OP-V instructions with overrides
 for the most relevant CSRs:
 
     |      6                   5    |              4                |  3                   2        |          1                    |
@@ -298,5 +297,5 @@ encoding for the length, where instruction length in `bits = 112 + 16*length`.
 If `length=31` is reserved for even longer instructions then this scheme would
 encode for instructions of up to 592 bits length (74 bytes).
 
-In this scheme there would be no packed format, load-immediate format, or jump-and-link format for
+In this scheme there would be no extended format, load-immediate format, or jump-and-link format for
 instructions >96-bits.

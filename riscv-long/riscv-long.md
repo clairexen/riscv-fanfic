@@ -237,6 +237,20 @@ The following format simply uses one byte for each of the immediate arguments.
     |0|   dst_len   |0|   dst_off   |0|   src_len   |0|   src_off   |    funct7   |   rs2   |   rs1   | len |    rd   |spc|  11111  | bfxpu
 
 
+Overflow-Checked Arithmetic
+---------------------------
+
+The J Extension proposal discusses overflow-checked arithmetic instructions. One possible semantic for those would be
+an instruction with an additional immediate that, when an overflow is detected, writes PC to rd and jumps to PC+imm:
+
+    |              4                |  3                   2        |          1                    |
+    |7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2|1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
+    ------------------------------------------------------------------------------------------------|
+    |          imm          |   OP  |    funct7   |   rs2   |   rs1   | len |    rd   |spc|  11111  |
+
+The 4-bit OP field would select the arithmetic operation.
+
+
 "V" Vector Extension Ops
 ------------------------
 

@@ -11,7 +11,7 @@ Design goals:
 - Uniform instruction formats that work with a wide range of instructions
   - so we can keep decoder logic simple even when adding loads of instructions over time
 
-We define five instruction formats: "prefix", "load-immediate", "jump-and-link", and "extended".
+We define four instruction formats: "prefix", "load-immediate", "jump-and-link", and "extended".
 
      |              4                    |  3                   2        |          1                    |
      |7 6 5 4 3 2 1 0 1 0 9 8 7 6 5 4 3 2|1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|

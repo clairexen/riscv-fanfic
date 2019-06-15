@@ -190,61 +190,51 @@ LJAL instructions are only valid if `imm[0]` is zero. (`imm[1:0]` when `IALIGN=3
 Bitfield extract and place
 --------------------------
 
-In the RISC-V Bit Manipulation ISA task group we considered an instruction
-such as the following (bfxp = bitfield extract and place):
+In the RISC-V Bit Manipulation Extension draft proposes two 64-bit instructions
+with the following semantic (bfxp = bitfield extract and place):
 
-	uint_xlen_t bfxp(uint_xlen_t rs1, uint_xlen_t rs2,
-			unsigned start, unsigned length, unsigned dest)
-	{
-		assert(start < XLEN && length < XLEN && dest < XLEN);
+    uint_xlen_t bfxp(uint_xlen_t rs1, uint_xlen_t rs2,
+                    unsigned src_off, unsigned src_len, unsigned dst_off, unsigned dst_len)
+    {
+            assert(src_off < XLEN && src_len < XLEN && dst_off < XLEN && dst_len < XLEN);
 
-		assert(start + length <= XLEN);
-		assert(dest + length <= XLEN);
-		assert(length != 0);
+            uint_xlen_t src_mask = rol(slo(0, src_len), src_off);
+            uint_xlen_t dst_mask = rol(slo(0, dst_len), dst_off);
+            if (dst_len == 0) dst_mask = ~(uint_xlen_t)0;
 
-		uint_xlen_t x = rs1;
-		x <<= XLEN-start-length;
-		x >>= XLEN-length;
-		x <<= dest;
+            uint_xlen_t value = ror((rs1 & src_mask), src_off);
 
-		uint_xlen_t y = ~uint_xlen_t(0);
-		y <<= XLEN-start-length;
-		y >>= XLEN-length;
-		y <<= dest;
+            // sign-extend
+            value = sra(sll(value, XLEN-src_len), XLEN-src_len);
+            if (src_len == 0) value = ~(uint_xlen_t)0;
 
-		return x | (rs2 & ~y);
-	}
+            return (rs2 & ~dst_mask) | (rol(value, dst_off) & dst_mask);
+    }
 
-With start, length, dest being 7-bit immediate arguments.
-(For future-compatibility with RV128, all three arguments must be 7 bits wide.)
+    uint_xlen_t bfxpu(uint_xlen_t rs1, uint_xlen_t rs2,
+                    unsigned src_off, unsigned src_len, unsigned dst_off, unsigned dst_len)
+    {
+            assert(src_off < XLEN && src_len < XLEN && dst_off < XLEN && dst_len < XLEN);
 
-So this instruction would have `3*7=21` immediate bits, too large for a 32-bit
-instruction. But it could be easy implemented as 64-bit prefix-type instruction:
+            uint_xlen_t src_mask = rol(slo(0, src_len), src_off);
+            uint_xlen_t dst_mask = rol(slo(0, dst_len), dst_off);
+            if (dst_len == 0) dst_mask = ~(uint_xlen_t)0;
+
+            uint_xlen_t value = ror((rs1 & src_mask), src_off);
+
+            return (rs2 & ~dst_mask) | (rol(value, dst_off) & dst_mask);
+    }
+
+With src\_off, src\_len, dst\_off, and dst\_len being 7-bit immediate arguments.
+(For future-compatibility with RV128, all four arguments must be 7 bits wide.)
+
+The following format simply uses one byte for each of the immediate arguments.
 
     |      6                   5    |              4                |  3                   2        |          1                    |
     |3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8|7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2|1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
     |-------------------------------------------------------------------------------------------------------------------------------|
-    |    start    |    length   |     dest    | f2|   rs2   |   rs1   |  f3 |    rd   |     opcode    | len | 00|page | 00|  11111  | BFXP
-
-
-Bitwise extract and place
--------------------------
-
-A more general version of BFXP, but limited to 32-bit values, would be the
-following 96-bit packed-type instruction:
-
-    |9            6|6            3|  3                   2        |          1                    |
-    |5            4|3            2|1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
-    |---------------------------------------------------------------------------------------------|
-    |   dst_mask   |   src_mask   |    funct7   |   rs2   |   rs1   | len |    rd   | 11|  11111  | BXP
-
-It replaces the following 192-bit sequence:
-
-    LI t0, src_mask
-    LI t1, dst_mask
-    BEXT t0, rs1, t0
-    BDEP t0, t0, t1
-    CMIX rd, t1, t0, rs2
+    |0|   dst_len   |0|   dst_off   |0|   src_len   |0|   src_off   |    funct7   |   rs2   |   rs1   | len |    rd   |spc|  11111  | bfxp
+    |0|   dst_len   |0|   dst_off   |0|   src_len   |0|   src_off   |    funct7   |   rs2   |   rs1   | len |    rd   |spc|  11111  | bfxpu
 
 
 "V" Vector Extension Ops

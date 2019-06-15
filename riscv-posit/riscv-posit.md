@@ -104,9 +104,12 @@ that convert between an XLEN posit and a smaller posit:
 The PCF* instructions convert from a smaller format to XLEN, and PCT* converts
 to a smaller format.
 
-The use of conversion function best fits the use-model that for 8-bit and
-16-bit arithmetic we usually want to use 8-bit and 16-bit formats for storing
-posits, but actual computations should be performed in larger formats to
+The PCT* result is stored sign-extended in the destination register. This allows
+for direct comparison of posits <XLEN using standard integer compare instructions.
+
+The use of conversion functions best fits the common use-model for 8-bit and
+16-bit arithmetic, where we usually want to use 8-bit and 16-bit formats for storing
+values in main memory, but actual computations should be performed in larger formats to
 minimize rounding errors.
 
 For architectures that support F/D/Q we also add conversion instructions:

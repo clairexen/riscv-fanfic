@@ -15,19 +15,38 @@ We define three instruction formats: "prefix", "extended", and "immediate".
      |              4                    |  3                   2        |          1                    |
      |7 6 5 4 3 2 1 0 1 0 9 8 7 6 5 4 3 2|1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
      ----------------------------------------------------------------------------------------------------|
-    ...       funct7   |   rs2   |   rs1   |  f3 |    rd   |    opcode   |  len  |   page  | 11|  11111  | prefix format
+    ...       funct7   |   rs2   |   rs1   |  f3 |    rd   |    opcode   | plen  |   page  | 11|  11111  | prefix format
     ...           immediate              |    funct7   |   rs2   |   rs1   | 000 |    rd   |len|  11111  | extended format
     ...                               immediate                          |  opc  |    rd   |len|  11111  | immediate format
 
-The "prefix format" is simply a 16-bit prefix for a regular formatted instruction. It uses a 4-bit field to encode the instruction length. The instruction is `16*len+48` bits long, including the prefix. Thus, len=0 encodes for an 48-bit instruction and len=13 encodes for a 256-bit instruction. len=14 and len=15 are reserved for custom extensions and future standard extensions respectively. The page field selects the opcode page, with pages 16-27 reserved for vendor extensions, and pages 28-31 reserved for custom extensions.
+The "prefix format" is simply a 16-bit prefix for a regular instruction, with an immediate appended when
+the instruction is 64-bit or longer. It uses the 4-bit plen field to encode the instruction length. The
+instruction is `16*plen+48` bits long, including the prefix. Thus, plen=0 encodes for an 48-bit instruction
+and plen=13 encodes for a 256-bit instruction. plen=14 and plen=15 are reserved for custom extensions and
+future standard extensions respectively.
 
-If each vendor is assigned a unique page+opcode pair, then the vendor extension space is large enough for 1536 vendors. If each vendor is assigned a unique page+opcode+f3 tuple then there is enough space for 12288 vendors.
+The page field selects the opcode page, with pages 16-27 reserved for vendor extensions, and pages 28-31
+reserved for custom extensions. If each vendor is assigned a unique page+opcode pair, then the vendor
+extension space is large enough for 1536 vendors. If each vendor is assigned a unique page+opcode+f3
+tuple then there is enough space for 12288 vendors.
 
-The "extended format" and the "immediate format" use a 2-bit length field, encoding for instructions that are 48-bit (00), 64-bit (01), or 80-bit (10) in size, with 11 indicating a prefix format instruction.
+The "extended format" and the "immediate format" use a 2-bit length field, encoding for instructions that
+are 48-bit (00), 64-bit (01), or 80-bit (10) in size, with 11 indicating a prefix format instruction.
 
-The "extended format" is just the regular 32-bit instruction format with f3=000 and additional immediate bits following after the 32-bit instruction word. Instructions should never occupy more than one funct7 code point, and, if possible, should share the same funct7 code point with other instructions from the same extension. `funct7=111----` is reserved for custom extensions.
+    |len|
+    |---|
+    | 00| 48-bit extended/immediate format
+    | 01| 64-bit extended/immediate format
+    | 10| 80-bit extended/immediate format
+    | 11| (16*plen+48)-bit prefix formal
 
-The "immediate format" is a truncated form of the "extended format", with only the rd field and a 4-bit opc (opcode) field encoding for the operation.
+The "extended format" is just the regular 32-bit instruction format with f3=000 and additional immediate bits
+following after the 32-bit instruction word. Instructions should never occupy more than one funct7 code point,
+and, if possible, should share the same funct7 code point with other instructions from the same extension.
+`funct7=111----` is reserved for custom extensions.
+
+The "immediate format" is a truncated form of the "extended format", with only the rd field and a 4-bit opc
+(opcode) field encoding for the operation.
 
     | opc|
     |----|
@@ -37,7 +56,8 @@ The "immediate format" is a truncated form of the "extended format", with only t
     |-01-| reserved
     |-1--| custom
 
-In prefix format instructions, the lower bits of the opcode field may be used for additional immediate bits, effectively allocating naturally aligned consecutive opcodes to the same instruction.
+In prefix format instructions, the lower bits of the opcode field may be used for additional immediate bits,
+effectively allocating naturally aligned consecutive opcodes to the same instruction.
 
 ----
 
@@ -55,9 +75,16 @@ In prefix format instructions, the lower bits of the opcode field may be used fo
 Appendix I: (Un)frequently Asked Questions
 ==========================================
 
-Q: How many opcodes does the 48-bit prefix-format (len=0) provide?
+Q: How many opcodes does the 48-bit "prefix format" (plen=0) provide?
 
-A: The equivalent of 2048 major opcodes (or 16384 minor opcodes) for standard extensions, and another 2048 major opcodes for custom extensions.
+A: The equivalent of 2048 major opcodes (or 16384 minor opcodes) for standard extensions,
+and another 2048 major opcodes for vendor extensions and custom extensions.
+
+Q: How many opcodes does the 48-bit "extended format" (len=0) provide?
+
+A: Only 128, if only funct7 is used to distinguish opcodes. That's why it is
+strongly encouraged to use just one funct7 codepoint for a whole family of
+instructions, or use the "f8 extended format" (see below).
 
 
 Appendix II: Example Instructions
@@ -77,8 +104,42 @@ load-immediate and jump-and-link instructions.
 The load-integer-immedate instruction sign-extends the immediate, if the
 immediate is smaller than XLEN.
 
-The jump-and-link instruction uses the LSB bit of the immediate as sign bit.
-When `IALIGN=32` then the instruction is only valid if `imm[1]` is zero.
+The jump-and-link instruction uses the LSB bit of the immediate as sign bit
+for sign-extension when the immediate is smaller than XLEN. When `IALIGN=32`
+then the instruction is only valid if `imm[1]` is zero.
+
+     |  4      2        |          1                    |
+     |7 6  ... 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
+     |--------------------------------------------------|
+     |     immediate    |  0001 |    rd   | 00|  11111  | JAL.32
+     |     immediate    |  1001 |    rd   | 00|  11111  | LI.32
+
+     |  6      2        |          1                    |
+     |3 2  ... 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
+     |--------------------------------------------------|
+     |     immediate    |  0001 |    rd   | 00|  11111  | JAL.48
+     |     immediate    |  1001 |    rd   | 00|  11111  | LI.48
+
+     |  7      2        |          1                    |
+     |9 8  ... 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
+     |--------------------------------------------------|
+     |     immediate    |  0001 |    rd   | 00|  11111  | JAL.64
+     |     immediate    |  1001 |    rd   | 00|  11111  | LI.64
+
+
+Extended format encoding space and R4-type extended format instructions
+-----------------------------------------------------------------------
+
+To preserve encoding space, extended format instructions should use the "f8 extended format"
+when there is sufficient space left left in the immediate field.
+
+Instructions that require a third source operand should use the the "r4 extended format".
+
+     |              4                    |  3                   2        |          1                    |
+     |7 6 5 4 3 2 1 0 1 0 9 8 7 6 5 4 3 2|1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
+     ----------------------------------------------------------------------------------------------------|
+    ...       immediate  |     funct8    |   0000000   |   rs2   |   rs1   | 000 |    rd   |len|  11111  | f8 extended format
+    ...       immediate  |     funct8    |   rs3   | 11|   rs2   |   rs1   | 000 |    rd   |len|  11111  | r4 extended format
 
 
 Overflow-Checked Arithmetic

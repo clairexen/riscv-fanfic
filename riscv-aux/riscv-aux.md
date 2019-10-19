@@ -13,8 +13,8 @@ extension-agnostic interface.
 
 Part2 is my proposed solution to the problem described in part 1.
 
-Part 3 discusses a possible standard hardware interface that could be used to
-create portable accelerator IPs that works with many different RISC-V cores.
+Part 3 describes an S-mode extension that could help manage shared
+hardware resources.
 
 
 Part 1: Auxiliary functions and auxiliary state
@@ -70,11 +70,6 @@ when referring to the extensions enabled by Xaux, and we use *Xaux* when
 referring to the Xaux extension itself. We further use the term
 *extension-defined* for details that must be defined by those extensions.
 
-Each region has a variable *state length* (SL), that can be read with AUXGETSL
-and updated with AUXSETSL. Saving/restoring SL and the first SL elements of a
-region must be sufficient to completely restore the state of a region. Reading
-and writing the first SL elements of a region must be free of side-effects.
-
 The base Xaux extension
 -----------------------
 
@@ -89,25 +84,20 @@ naturally aligned to its size.
 The AUXGETSL, AUXSETSL, and AUXNEXT instructions below operate on regions
 and the region base address is used to specify a region.
 
-We allocate one minor opcode and add the following instructions:
+We define the following instructions:
 
     |  3                   2        |          1                    |
     |1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
     |---------------------------------------------------------------|
-    | 000 |  0000 |  00000  |   rs1   |  f3 |    rd   |    opcode   | AUXGETSL
-    | 000 |  0001 |  00000  |   rs1   |  f3 |    rd   |    opcode   | AUXNEXT
-    | off |  0010 |  00000  |   rs1   |  f3 |    rd   |    opcode   | AUXRD
-    | off |  0100 |  00000  |   rs1   |  f3 |    rd   |    opcode   | AUXRD.S
-    | off |  0101 |  00000  |   rs1   |  f3 |    rd   |    opcode   | AUXRD.D
-    | off |  0110 |  00000  |   rs1   |  f3 |    rd   |    opcode   | AUXRD.Q
-    | off |  0111 |  00000  |   rs1   |  f3 |    rd   |    opcode   | AUXRD.V
+    | off | --- |0|   rs2   |   rs1   | --- |  00000  | ----------- | AUXWR
+    | 011 | --- |1|   rs2   |   rs1   | --- |  00000  | ----------- | AUXSETSL
     |---------------------------------------------------------------|
-    | 000 |  1000 |   rs2   |   rs1   |  f3 |  00000  |    opcode   | AUXSETSL
-    | off |  1010 |   rs2   |   rs1   |  f3 |  00000  |    opcode   | AUXWR
-    | off |  1100 |   rs2   |   rs1   |  f3 |  00000  |    opcode   | AUXWR.S
-    | off |  1101 |   rs2   |   rs1   |  f3 |  00000  |    opcode   | AUXWR.D
-    | off |  1110 |   rs2   |   rs1   |  f3 |  00000  |    opcode   | AUXWR.Q
-    | off |  1111 |   rs2   |   rs1   |  f3 |  00000  |    opcode   | AUXWR.V
+    | off | --- |0|  00000  |   rs1   | --- |    rd   | ----------- | AUXRD
+    | 001 | --- |1|  00000  |   rs1   | --- |    rd   | ----------- | AUXGETSL
+    | 010 | --- |1|  00000  |   rs1   | --- |    rd   | ----------- | AUXNEXT
+    |---------------------------------------------------------------|
+    | 000 | --- |0|   rs2   |   rs1   | --- |  00000  | ----------- | AUXWR.V
+    | 000 | --- |0|  00000  |   rs1   | --- |    rd   | ----------- | AUXRD.V
 
 The instructions with an offset (off) field operate on the Xaux address
 `rs1+off`. The remaining instructions operate on `rs1`. The offset is unsigned.
@@ -118,23 +108,43 @@ between memory and Xaux registers.
 
 AUXRD and AUXWR read/write the Xaux register at `rd1+off`.
 
-On RV32:
-- AUXWR.S and AUXWR.S behave like AUXRD and AUXWR, but rs2/rd is a floating point
-  register.
-- AUXRD.D and AUXWR.D address two consequtive, naturally aligned Xaux registers.
-- AUXRD.Q and AUXWR.Q address four consequtive, naturally aligned Xaux registers.
-
-On RV64:
-- AUXWR.S, AUXWR.S, AUXRD.D, and AUXWR.D behave like AUXRD and AUXWR, but rs2/rd
-  is a floating point register.
-- AUXRD.Q and AUXWR.Q address two consequtive, naturally aligned Xaux registers.
-
-Finally, AUXRD.V and AUXWR.V read/write AVL words from/to a vector register
+AUXRD.V and AUXWR.V read/write AVL words from/to a vector register
 rs2/rd.  If `SEW/EDIV > XLEN` then the instructions addresses blocks of
 consecutive, naturally aligned Xaux registers.
 
+Context switch
+--------------
 
-Part 3: The RISC-V Auxiliary Function Interface
+To save the auxilary state and disable all accelerators during context switch,
+the OS kernel must run the following algorithm:
+
+	PTR := AUXNEXT(0)
+	while PTR != 0 begin
+		LEN := AUXGETSL(PTR)
+		if LEN != 0 begin
+			write(PTR)
+			write(LEN)
+			for I := 0 .. LEN-1 begin
+				write(AUXRD(PTR+I))
+			end
+			AUXSETSL(PTR, 0)
+		end
+		PTR := AUXNEXT(PTR)
+	end
+
+And restoring the state:
+
+	while not EOF begin
+		PTR := read()
+		LEN := read()
+		AUXSETSL(PTR, LEN)
+		for I := 0 .. LEN-1 begin
+			AUXWR(PTR+I, read())
+		end
+	end
+
+
+Part 3: Time-sharing accelerators between cores
 ===============================================
 
 TBD

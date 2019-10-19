@@ -10,28 +10,32 @@ Design goals:
 - Uniform instruction formats that work with a wide range of instructions
   - so we can keep decoder logic simple even when adding loads of instructions over time
 
-We define two instruction formats: "prefix", and "immediate".
+We define three instruction formats: "prefix", "extended", and "immediate".
 
      |              4                    |  3                   2        |          1                    |
      |7 6 5 4 3 2 1 0 1 0 9 8 7 6 5 4 3 2|1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
      ----------------------------------------------------------------------------------------------------|
     ...       funct7   |   rs2   |   rs1   |  f3 |    rd   |    opcode   |  len  |   page  | 11|  11111  | prefix format
+    ...           immediate              |    funct7   |   rs2   |   rs1   | 000 |    rd   |len|  11111  | extended format
     ...                               immediate                          |  opc  |    rd   |len|  11111  | immediate format
 
-The prefix format is simply a 16-bit prefix for a regular formatted instruction. It uses a 4-bit field to encode the instruction length. The instruction is `16*len+48` bits long, including the prefix. Thus, len=0 encodes for a 48-bit instruction and len=13 encodes for a 256-bit instruction. len=14 and len=15 are reserved for future standard and custom extensions respectively. The page field selects the opcode page, with pages 16-31 reserved for custom extensions.
+The "prefix format" is simply a 16-bit prefix for a regular formatted instruction. It uses a 4-bit field to encode the instruction length. The instruction is `16*len+48` bits long, including the prefix. Thus, len=0 encodes for an 48-bit instruction and len=13 encodes for a 256-bit instruction. len=14 and len=15 are reserved for custom extensions and future standard extensions respectively. The page field selects the opcode page, with pages 16-27 reserved for vendor extensions, and pages 28-31 reserved for custom extensions.
 
-The immediate format has only a 2-bit length field, encoding for instructions that are 48-bit (00), 64-bit (01), or 80-bit (10) in size. The 4-bit opc (opcode) field encodes for the following operations.
+If each vendor is assigned a unique page+opcode pair, then the vendor extension space is large enough for 1536 vendors. If each vendor is assigned a unique page+opcode+f3 tuple then there is enough space for 12288 vendors.
+
+The "extended format" and the "immediate format" use a 2-bit length field, encoding for instructions that are 48-bit (00), 64-bit (01), or 80-bit (10) in size, with 11 indicating a prefix format instruction.
+
+The "extended format" is just the regular 32-bit instruction format with f3=000 and additional immediate bits following after the 32-bit instruction word. Instructions should never occupy more than one funct7 code point, and, if possible, should share the same funct7 code point with other instructions from the same extension. `funct7=111----` is reserved for custom extensions.
+
+The "immediate format" is a truncated form of the "extended format", with only the rd field and a 4-bit opc (opcode) field encoding for the operation.
 
     | opc|
     |----|
-    |0000| load integer immediate, zero extended
-    |0001| load integer immediate, ones extended
-    |1000| load floating point immediate
-    |1001| jump and link
+    |-000| extended format
+    |0001| jump and link
+    |1001| load immediate
     |-01-| reserved
     |-1--| custom
-
-Note that the opc field is formatted in a way that would allow for future instructions that are formatted similar to the "extended" instruction format proposed in [riscv-long-A.md](riscv-long-A.md).
 
 In prefix format instructions, the lower bits of the opcode field may be used for additional immediate bits, effectively allocating naturally aligned consecutive opcodes to the same instruction.
 
@@ -67,50 +71,49 @@ proposal.
 Load-large-immediate and long JALR
 ----------------------------------
 
-The above instruction format is set up to support efficient encodings for
+The "immediate format" instruction format provides efficient encodings for
 load-immediate and jump-and-link instructions.
 
-The load-integer-immedate instructions come in ones-extended and zero-extended
-forms for when the immediate is smaller than XLEN.
+The load-integer-immedate instruction sign-extends the immediate, if the
+immediate is smaller than XLEN.
 
-The load-float-immediate instructions are only valid for 32-bit and 64-bit immediates.
-
-The jump-and-link instructions use the LSB bit of the immediate as sign bit. When `IALIGN=32`
-then then the instruction is only valid if `imm[1]` is zero.
+The jump-and-link instruction uses the LSB bit of the immediate as sign bit.
+When `IALIGN=32` then the instruction is only valid if `imm[1]` is zero.
 
 
 Overflow-Checked Arithmetic
 ---------------------------
 
-The J Extension proposal discusses overflow-checked arithmetic instructions. One possible semantic for those would be
+The J Extension proposal discusses overflow-checked arithmetic instructions. One possible implementation would be
 an instruction with an additional immediate that, when an overflow is detected, writes PC to rd and jumps to PC+imm.
 
-For example, as 48-bit instruction with a 12-bit immediate we could fit 32 overflow-checked arithmetic instructions
-in one opcode page:
+Using a single funct7 code point in 48-bit "extended format":
 
     |              4                |  3                   2        |          1                    |
     |7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2|1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
     ------------------------------------------------------------------------------------------------|
-    |     imm7    |   rs2   |   rs1   | im3 |    rd   |  opcode |im2|0| 000 |   page  | 11|  11111  | Overflow-checked OP
+    |          imm          |   OP  |    funct7   |   rs2   |   rs1   | 000 |    rd   | 00|  11111  |
+
+The 4-bit OP field would select the arithmetic operation.
 
 
 "V" Vector Extension Ops
 ------------------------
 
 Based on the current "V" vector extension proposal (https://riscv.github.io/documents/riscv-v-spec/),
-something like the following 64-bit instruction could implement OP-V instructions with overrides
-for the most relevant CSRs. This format would allocate an entire opcode page for V extension instructions.
+something like the following 64-bit instruction could implement OP-V instructions with static overrides
+for the most relevant CSRs.
+
+Using a single funct7 code point in 64-bit "extended format":
 
     |      6                   5    |              4                |  3                   2        |          1                    |
     |3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8|7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2|1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
     |-------------------------------------------------------------------------------------------------------------------------------|
-    |        VTYPE        |  RM | VM|   RSM   | F2|   rs2   |   rs1   |  F3 |    rd   |      F7     |  0001 |   page  | 11|  11111  | OP-V
-
-F2 is and additional field for addressing an even wider range of operations.
+    |        VTYPE        |  RM |   RSM   | VM|       F8      |  F3 |    funct7   |   rs2   |   rs1   | 000 |    rd   | 01|  11111  | OP-V
 
 F3 contains funct3, i.e. select OPIVV, OPFVV, OPMVV, OPIVI, OPIVX, OPFVF, or OPMVX.
 
-F7 contains funct6, i.e. select the operation. Note that this field is 7 bits
+F8 contains funct6, i.e. select the operation. Note that this field is 8 bits
 long, allowing for additional instructions that would not fit into the 32-bit
 base encoding.
 

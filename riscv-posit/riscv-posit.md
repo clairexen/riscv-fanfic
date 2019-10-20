@@ -26,102 +26,117 @@ This proposal coveres 3 different types of instructions:
 - Instructions for working with vectors of posits, using V-extension vectors
 - Instructions for managing a quire and performing posit multiply-accumulate.
 
+The extension name "Xposit" shall be used for a core that supports all of the
+instructions up to XLEN listed below, including the floating point convert
+instructions when the core support F/D/Q, and the vector instructions when the
+core supports the V extension.
+
+The extension names "Xposit8", "Xposit16", "Xposit32", and "Xposit64" shall be
+used for cores that support scalar posit instructions up to the specified size.
+Such a core does not need to implement any posit-ieee floating point conversion
+instructions or vector instructions, even if the core support F/D/Q and/or V.
+
 
 Scalar Posit Extension
 ======================
 
-Posits compare like integers, so all integer branch instructions and compare
+The scalar posit extension uses the general purpose integer registers.
+
+The posit instructions exist in .B, .H, .W, and .D variants, for 8-bit, 16-bit,
+32-bit, and 64-bit posits. Posits that are smaller than XLEN are stored in the
+LSB end of the register, sign-extended to XLEN. With the exception of PNAR,
+the posit instructions ignore the upper bits of their inputs.
+
+Posits compare like signed integers, so all integer branch instructions and compare
 instructions work with posits as well, without the need for extra instructions.
 
 Same for MIN/MAX (from B extension), negate, and abs().
 
 The following new instructions are added to the OP major opcode:
 
-	PADD       rd, rs1, rs2
-	PSUB       rd, rs1, rs2
-	PMUL       rd, rs1, rs2
-	PDIV       rd, rs1, rs2
-	PSQRT      rd, rs1
-	PSIGN      rd, rs1
+	PADD.[BHWD]   rd, rs1, rs2
+	PSUB.[BHWD]   rd, rs1, rs2
+	PMUL.[BHWD]   rd, rs1, rs2
+	PDIV.[BHWD]   rd, rs1, rs2
+	PSQRT.[BHWD]  rd, rs1
+	PSIGN.[BHWD]  rd, rs1
+	PNAR.[BHWD]   rd, rs1
 
-  PSIGN returns the posit -1 if rs1 is negative, +1 if rs1 is positive, zero
-  if rs1 is zero, and NaR is rs1 is NaR.
+PSIGN returns the posit -1 if rs1 is negative, +1 if rs1 is positive, zero
+if rs1 is zero, and NaR is rs1 is NaR.
 
-Testing if the posit in a0 is NaR (for triggering runtime exceptions) is
-already a two-instruction sequence, so no special instruction is added for
-this application:
-
-	ADDI t0, a0, -1
-	BLT a0, t0, error
+PNAR returns the integer 1 is the posit argument is NaR, -1 if the posit
+argument is not well formed (not properly sign extended), and 0 otherwise.
 
 For "parsing" and generating posits we also add the following instructions:
 
-	PEXP  rd, rs1
-	PFRC  rd, rs1, rs2
-	PMAK  rd, rs1, rs2
+	PEXP.[BHWD]  rd, rs1
+	PFRC.[BHWD]  rd, rs1, rs2
+	PMAK.[BHWD]  rd, rs1, rs2
 
-  PEXP returns the "effective exponent" encoded in the posit "R" and "E"
-  fields and implied by XLEN, and PFRAC returns the "effective fraction"
-  encoded in the posit "S" and "F" fields, when given PEXP(X) in rs2, so that,
-  ignoring rounting errors:
+PEXP returns the "effective exponent" encoded in the posit "R" and "E"
+fields and implied by the posit size, and PFRAC returns the "effective fraction"
+encoded in the posit "S" and "F" fields, when given PEXP(X) in rs2, so that,
+ignoring rounting errors:
 
 	X = exp2(PEXP(X)) * PFRAC(X, PEXP(X))
 
-  When PEXP(X) is given to PFRC in rs2, then PFRAC(X) is aligned to the MSB end
-  of the result, with the implicit 1 on position XLEN-2 and MSB (XLEN-1)
-  used as sign bit.
+When PEXP(X) is given to PFRC in rs2, then PFRAC(X) is aligned to the MSB end
+of the result, with the implicit 1 on position XLEN-2 and MSB (XLEN-1)
+used as sign bit.
 
-  If another value is given to PFRC in rs2 then the result is shifted
-  accordingly, and shall satturate (not overflow) at INT_MIN and INT_MAX.
+If another value is given to PFRC in rs2 then the result is shifted
+accordingly, and shall satturate (not overflow) at XLEN_INT_MIN and XLEN_INT_MAX.
 
-  PMAK reverses the process, with "effective fraction" in rs1 and "effective
-  exponent" in rs2.
+PMAK reverses the process, with "effective fraction" in rs1 and "effective
+exponent" in rs2.
 
 When called with rs2=zero, PFRC returns the nearest integer that best
 approximates the posit, and PMAK simply converts an integer to a posit.
 
+When called with rs1=1, PMAK returns the posit for exp2(rs2).
+
 For zero and NaR we define:
 
-  PEXP returns INT_MIN if the argument is zero and INT_MAX if the argument
-  is NaR.
+- PEXP returns XLEN_INT_MIN if the argument is zero and XLEN_INT_MAX if the argument is NaR.
   
-  PFRC returns zero if the argument is zero or NaR.
+- PFRC returns zero if the argument is zero or NaR.
   
-  PMAK returns NaR if rs1 is zero and rs2 is INT_MAX, and rounds to the
+- PMAK returns NaR if rs1 is zero and rs2 is XLEN_INT_MAX, and rounds to the
   next posit according to the above formula for all other values of rs1 and rs2.
 
-For posit arithmetic on 8-bit and 16-bit values we define conversion functions
-that convert between an XLEN posit and a smaller posit:
+We also define conversion functions that convert between posit formats:
 
-	PCF8  rd, rs1
-	PCF16 rd, rs1
-	PCF32 rd, rs1  (RV64-only)
+	PCVT.H.B rd, rs1   (convert from posit8 to posit16)
+	PCVT.W.B rd, rs1   (convert from posit8 to posit32)
+	PCVT.D.B rd, rs1   (convert from posit8 to posit64, RV64-only)
 
-	PCT8  rd, rs1
-	PCT16 rd, rs1
-	PCT32 rd, rs1  (RV64-only)
+	PCVT.B.H rd, rs1   (convert from posit16 to posit8)
+	PCVT.W.H rd, rs1   (convert from posit16 to posit32)
+	PCVT.D.H rd, rs1   (convert from posit16 to posit64, RV64-only)
 
-The PCF* instructions convert from a smaller format to XLEN, and PCT* converts
-to a smaller format.
+	PCVT.B.W rd, rs1   (convert from posit32 to posit8)
+	PCVT.H.W rd, rs1   (convert from posit32 to posit16)
+	PCVT.D.W rd, rs1   (convert from posit32 to posit64, RV64-only)
 
-The PCT* result is stored sign-extended in the destination register. This allows
-for direct comparison of posits <XLEN using standard integer compare instructions.
-
-The use of conversion functions best fits the common use-model for 8-bit and
-16-bit arithmetic, where we usually want to use 8-bit and 16-bit formats for storing
-values in main memory, but actual computations should be performed in larger formats to
-minimize rounding errors.
+	PCVT.B.D rd, rs1   (convert from posit64 to posit8, RV64-only)
+	PCVT.H.D rd, rs1   (convert from posit64 to posit16, RV64-only)
+	PCVT.W.D rd, rs1   (convert from posit64 to posit32, RV64-only)
 
 For architectures that support F/D/Q we also add conversion instructions:
 
-	PCFF.<fmt> rd, rs1
-	PCTF.<fmt> rd, rs1
+	PCFF.[BHWD].[FDQ] rd, rs1   (convert from ieee float to posit)
+	PCTF.[FDQ].[BHWD] rd, rs1   (convert from posit to ieee float)
 
-PCFF.<fmt> converts an IEEE float (from a f0-f31 register) to a posit, and
-PCTF.<fmt> converts a posit to an IEEE float.
+PCFF converts an IEEE float (from a f0-f31 register) to a posit, and PCTF
+converts a posit to an IEEE float.
 
-On RV64 we also add *W variants of all the instructions above that operate on
-posit32 instead of posit64.
+In total, this are 4x6=24 R-type instructions, 4x4=16 unary compute instructions,
+3x4=12 unary posit-posit convert instructions, and 2x3x4=24 unary posit-float
+convertion instructions.
+
+Thus the total required encoding space for this extension would be equivalent
+to just under 26 R-type instructions.
 
 
 Vector Posit Extension
@@ -136,6 +151,7 @@ OPIVV (vector-vector) instructions:
 	VPDIV.vv    vd, vs1, vs2, vm
 	VPSQRT.vv   vd, vs1, vm
 	VPSIGN.vv   vd, vs1, vm
+	VPNAR.vv    vd, vs1, vm
 
 The posit format is implicitly defined by the vector element size.
 
@@ -149,7 +165,7 @@ We also define the following OPIVX (vector-scalar) instructions:
 	VPRDIV.vx   vd, vs1, rs2, vm
 
 The scalar operand is always an XLEN posit, i.e. a posit64 on RV64 and
-a posit32 on RV32. (I.e. there are no *W versions of these instructions.)
+a posit32 on RV32.
 
 The existing integer min/max reduction functions also work with posits. So
 we just need to add ordered and unordered posit sum instructions:
@@ -171,5 +187,5 @@ Notes
 
 A previous version of this document had instruction for differnt posit "es"
 settings. This version just supports the "es" settings recommended in the
-posit standard, i.e. es=0 for posit8, 1 for posit16, 2 for posit32, and 3
-for posit64.
+posit standard, i.e. es=0 for posit8 (B), 1 for posit16 (H), 2 for posit32 (W),
+and 3 for posit64 (D).

@@ -82,9 +82,10 @@ and another 2048 major opcodes for vendor extensions and custom extensions.
 
 Q: How many opcodes does the 48-bit "extended format" (len=0) provide?
 
-A: Only 128, if only funct7 is used to distinguish opcodes. That's why it is
-strongly encouraged to use just one funct7 codepoint for a whole family of
-instructions, or use the "f8 extended format" (see below).
+A: Only 128, if only funct7 is used to distinguish opcodes, fewer if `funct7=-----11`
+is used for ternary instructions (see "r4 extended format" below). That's why it is
+strongly encouraged to use just one funct7 codepoint for a whole family of instructions,
+or use the "f8 extended format" (see below).
 
 
 Appendix II: Example Instructions

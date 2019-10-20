@@ -91,7 +91,7 @@ is used for ternary instructions (see "r4 extended format" below). That's why it
 strongly encouraged to use just one funct7 codepoint for a whole family of instructions,
 or use the "f8 extended format" (see below).
 
-Q: When should an instruction use the "prefix format", when the "extended format".
+Q: When should an instruction use the "prefix format", when the "extended format"?
 
 A: The "extended format" is the preferred way of encoding an instruction that
 has a fixed length, is 80-bit or shorter, and can be encoded using only one

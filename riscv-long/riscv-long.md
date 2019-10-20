@@ -10,6 +10,10 @@ Design goals:
 - Uniform instruction formats that work with a wide range of instructions
   - so we can keep decoder logic simple even when adding loads of instructions over time
 
+Note: For simplicity we always refer to additional instruction word bits as "immediate" when
+describing instruction formats in this document. This should not be understood as dedicating
+those extra bits for immediate values. The instructions define the semantic of those additional bits.
+
 We define three instruction formats: "prefix", "extended", and "immediate".
 
      |              4                    |  3                   2        |          1                    |

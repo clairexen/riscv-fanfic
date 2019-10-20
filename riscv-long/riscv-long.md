@@ -47,7 +47,7 @@ are 48-bit (00), 64-bit (01), or 80-bit (10) in size, with 11 indicating a prefi
     | 00| 48-bit extended/immediate format
     | 01| 64-bit extended/immediate format
     | 10| 80-bit extended/immediate format
-    | 11| (16*plen+48)-bit prefix formal
+    | 11| (16*plen+48)-bit prefix format
 
 The "immediate format" is a truncated form of the "extended format", with only the rd field and a 4-bit opc
 (opcode) field encoding for the operation.

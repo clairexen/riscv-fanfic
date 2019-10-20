@@ -30,7 +30,16 @@ reserved for custom extensions. If each vendor is assigned a unique page+opcode 
 extension space is large enough for 1536 vendors. If each vendor is assigned a unique page+opcode+f3
 tuple then there is enough space for 12288 vendors.
 
-The "extended format" and the "immediate format" use a 2-bit length field, encoding for instructions that
+The 48-bit "prefix format" can be thought of as just much more 32-bit encoding space. The longer prefix
+formats simply add additional immediate bits.
+
+The "extended format" is just the regular 32-bit instruction format with f3=000 and additional immediate bits
+following after the 32-bit instruction word. funct7 encoding space for "extended format" instructions is precious.
+These instructions should therefore never occupy more than one funct7 code point, and, if possible, should share
+the same funct7 code point with other instructions from the same extension. `funct7=-----10` is used for R4-type
+instructions and `funct7=-----11` is reserved for custom extensions.
+
+The "extended format" and the "immediate format" contain a 2-bit length field, encoding for instructions that
 are 48-bit (00), 64-bit (01), or 80-bit (10) in size, with 11 indicating a prefix format instruction.
 
     |len|
@@ -39,11 +48,6 @@ are 48-bit (00), 64-bit (01), or 80-bit (10) in size, with 11 indicating a prefi
     | 01| 64-bit extended/immediate format
     | 10| 80-bit extended/immediate format
     | 11| (16*plen+48)-bit prefix formal
-
-The "extended format" is just the regular 32-bit instruction format with f3=000 and additional immediate bits
-following after the 32-bit instruction word. Instructions should never occupy more than one funct7 code point,
-and, if possible, should share the same funct7 code point with other instructions from the same extension.
-`funct7=111----` is reserved for custom extensions.
 
 The "immediate format" is a truncated form of the "extended format", with only the rd field and a 4-bit opc
 (opcode) field encoding for the operation.
@@ -86,6 +90,14 @@ A: Only 128, if only funct7 is used to distinguish opcodes, fewer if `funct7=---
 is used for ternary instructions (see "r4 extended format" below). That's why it is
 strongly encouraged to use just one funct7 codepoint for a whole family of instructions,
 or use the "f8 extended format" (see below).
+
+Q: When should an instruction use the "prefix format", when the "extended format".
+
+A: The "extended format" is the preferred way of encoding an instruction that
+has a fixed length, is 80-bit or shorter, and can be encoded using only one
+funct7 code point or a fraction of that, and is used frequently enough to
+warrant the use of precious "extended format" encoding space. All other
+instructions should use the "prefix format".
 
 
 Appendix II: Example Instructions
@@ -132,15 +144,18 @@ Extended format encoding space and R4-type extended format instructions
 -----------------------------------------------------------------------
 
 To preserve encoding space, extended format instructions should use the "f8 extended format"
-when there is sufficient space left left in the immediate field.
+whenever there is sufficient space left left in the immediate field.
 
-Instructions that require a third source operand should use the the "r4 extended format".
+Instructions that require a third source operand (aka R4-type instructions)
+should use the the "r4 extended format":
 
      |              4                    |  3                   2        |          1                    |
      |7 6 5 4 3 2 1 0 1 0 9 8 7 6 5 4 3 2|1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
      ----------------------------------------------------------------------------------------------------|
-    ...       immediate  |     funct8    |   0000000   |   rs2   |   rs1   | 000 |    rd   |len|  11111  | f8 extended format
-    ...       immediate  |     funct8    |   rs3   | 11|   rs2   |   rs1   | 000 |    rd   |len|  11111  | r4 extended format
+    ...     immediate    |     funct8    |   0000000   |   rs2   |   rs1   | 000 |    rd   |len|  11111  | f8 extended format
+    ...     immediate    |     funct8    |   rs3   | 10|   rs2   |   rs1   | 000 |    rd   |len|  11111  | r4 extended format
+
+In both instruction formats `funct8=111-----` is reserved for custom extensions.
 
 
 Overflow-Checked Arithmetic

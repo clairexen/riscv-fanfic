@@ -62,7 +62,8 @@ The "immediate format" is a truncated form of the "extended format", with only t
     |0001| jump and link
     |1001| load immediate
     |-01-| reserved
-    |-1--| custom
+    |-10-| reserved
+    |-11-| custom
 
 In prefix format instructions, the lower bits of the opcode field may be used for additional immediate bits,
 effectively allocating naturally aligned consecutive opcodes to the same instruction.

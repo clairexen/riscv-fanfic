@@ -13,8 +13,7 @@ extension-agnostic interface.
 
 Part2 is my proposed solution to the problem described in part 1.
 
-Part 3 describes an S-mode extension that could help manage shared
-hardware resources.
+Part 3 describes an S-mode extension for managing shared hardware resources.
 
 
 Part 1: Auxiliary functions and auxiliary state
@@ -143,6 +142,22 @@ And restoring the state:
 		end
 	end
 
+Alternative CSR-based ISA
+-------------------------
+
+As an alternative to the `AUX*` instructions above, a CSR-based interface such
+as the following could be used. It has the disadvantage of adding additional
+state (the `auxptr` CSR), but the advantage or lower footprint in the ISA
+space.
+
+We add the following User CSRs:
+
+    CSR Name | Priv | Description
+    ----------------------------------
+    auxptr   |  URW | The current Xaux register file address
+    auxnext  |  URO | AUXNEXT(auxptr)
+    auxsize  |  URW | AUXGETSL(auxptr) or AUXSETSL(auxptr)
+    auxdata  |  URW | AUXRD(auxptr++) or AUXWR(auxptr++)
 
 Part 3: Time-sharing accelerators between cores
 ===============================================

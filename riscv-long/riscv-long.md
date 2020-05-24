@@ -149,7 +149,7 @@ Extended format encoding space and R4-type extended format instructions
 -----------------------------------------------------------------------
 
 To preserve encoding space, extended format instructions should use the "f8 extended format"
-whenever there is sufficient space left left in the immediate field.
+whenever there is sufficient space left in the immediate field.
 
 Instructions that require a third source operand (aka R4-type instructions)
 should use the the "r4 extended format":
@@ -177,6 +177,73 @@ Using a single funct7 code point in 48-bit "extended format":
     |          imm          |   OP  |    funct7   |   rs2   |   rs1   | 000 |    rd   | 00|  11111  |
 
 The 4-bit OP field would select the arithmetic operation.
+
+
+Integer Packed SIMD Instructions
+--------------------------------
+
+Using a single funct7 code point in 48-bit "extended format":
+
+    |              4                |  3                   2        |          1                    |
+    |7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2|1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
+    ------------------------------------------------------------------------------------------------|
+    |S| sfmt| dfmt|        OP       |    funct7   |   rs2   |   rs1   | 000 |    rd   | 00|  11111  |
+
+Where OP selects an operation and [sd]fmt selects the format for rs1/rs2 (sfmt) and rd (dfmt).
+
+    [sd]fmt | vector element size
+    -----------------------------
+      000   | bit        (1 bit)
+      001   | pair       (2 bit)
+      010   | nibble     (4 bit)
+      011   | byte       (8 bit)
+      100   | half-word (16 bit)
+      101   | word      (32 bit)
+      110   | dword     (64 bit)
+      111   | qword    (128 bit)
+
+S=1 selects signed operation and S=0 selects unsigned operation. This is used
+both for sign/zero extension when converting vector sizes and for determining
+overflow/saturation for overflow checks and saturated arithmetic.
+
+If dfmt is smaller than sfmt then the operation is performed in sfmt and then
+the results are down-converted to dfmt. The additional vector elements are
+zero-initialized and values that do not fit dfmt are saturated according to the
+S field.
+
+If sfmt is smaller than dfmt then the source arguments are first up-converted
+to dfmt, with sign/zero extension according to the S field. The excess source
+vector elements are ignored.
+
+Some example operations (OP is 9 bits wide, enough for a rich set of operations):
+
+*ADD, SUB, MUL, DIV, REM, ...* the regular arithmetic operations.
+
+*OADD, OSUB, OMUL, ...* set the output to 1 if the operation overflows, and
+to zero otherwise.
+
+*SADD, SSUB, SMUL, ...* like regular arithmetic but saturate instead of overflow.
+
+*SLT, SLE, SEQ* set output to 1 if less-than, less-equal, or equal, and to
+zero otherwise.
+
+*ALT* copy even elements from rs1 and odd elements from rs2 into the output
+vector.
+
+*MIX* even output elements are taken from the lower half of rs1 and odd output
+elements are taken from the lower half of rs2.
+
+*MIXU* even output elements are taken from the upper half of rs1 and odd output
+elements are taken from the upper half of rs2.
+
+*PERM* the elements in rs2 are indices of elements in rs1 to be copied into the
+output vector. out-of-bounds indices result in zero fields in the output.
+
+*SEL* a non-zero field in rs2 returns the corresponding field from rs1. Zero-elements
+in rs2 return zero fields.
+
+*NSEL* a zero field in rs2 returns the corresponding field from rs1. Non-zero-elements
+in rs2 return zero fields.
 
 
 "V" Vector Extension Ops

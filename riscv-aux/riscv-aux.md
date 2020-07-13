@@ -77,80 +77,16 @@ CSRs, and ISA registers. This address space addresses individual XLEN-sized
 words, similar to the CSR space. We call this the *Xaux register file*.
 
 An extension must define one or more *Xaux regions*, i.e. a base address and a
-size. The region size should be a power of two and the region should be
-naturally aligned to its size.
+reserved size. The reserved region size must be a power of two and the region
+should be naturally aligned to its reserved size.
 
-The AUXGETSL, AUXSETSL, and AUXNEXT instructions below operate on regions
-and the region base address is used to specify a region.
+Xaux base address zero must never be allocated to a region.
 
-We define the following instructions:
+Each region has an *active size*, which is zero if the region is *deactivated*.
 
-    |  3                   2        |          1                    |
-    |1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
-    |---------------------------------------------------------------|
-    | off | --- |0|   rs2   |   rs1   | --- |  00000  | ----------- | AUXWR
-    | 011 | --- |1|   rs2   |   rs1   | --- |  00000  | ----------- | AUXSETSL
-    |---------------------------------------------------------------|
-    | off | --- |0|  00000  |   rs1   | --- |    rd   | ----------- | AUXRD
-    | 001 | --- |1|  00000  |   rs1   | --- |    rd   | ----------- | AUXGETSL
-    | 010 | --- |1|  00000  |   rs1   | --- |    rd   | ----------- | AUXNEXT
-    |---------------------------------------------------------------|
-    | 000 | --- |0|   rs2   |   rs1   | --- |  00000  | ----------- | AUXWR.V
-    | 000 | --- |0|  00000  |   rs1   | --- |    rd   | ----------- | AUXRD.V
+The *active size* of a region must always be SMALLER than the reserved region size.
 
-The instructions with an offset (off) field operate on the Xaux address
-`rs1+off`. The remaining instructions operate on `rs1`. The offset is unsigned.
-
-The offset helps eliminating ADDI instructions in code that copies multiple
-words between GPRs and Xaux registers, or unrolled code that copies data
-between memory and Xaux registers.
-
-AUXRD and AUXWR read/write the Xaux register at `rd1+off`.
-
-AUXRD.V and AUXWR.V read/write AVL words from/to a vector register
-rs2/rd.  If `SEW/EDIV > XLEN` then the instructions addresses blocks of
-consecutive, naturally aligned Xaux registers.
-
-Context switch
---------------
-
-To save the auxilary state and disable all accelerators during context switch,
-the OS kernel must run the following algorithm:
-
-	PTR := AUXNEXT(0)
-	while PTR != 0 begin
-		LEN := AUXGETSL(PTR)
-		if LEN != 0 begin
-			write(PTR)
-			write(LEN)
-			for I := 0 .. LEN-1 begin
-				write(AUXRD(PTR+I))
-			end
-			AUXSETSL(PTR, 0)
-		end
-		PTR := AUXNEXT(PTR)
-	end
-
-And restoring the state:
-
-	while not EOF begin
-		PTR := read()
-		LEN := read()
-		AUXSETSL(PTR, LEN)
-		for I := 0 .. LEN-1 begin
-			AUXWR(PTR+I, read())
-		end
-	end
-
-Alternative CSR-based ISA
--------------------------
-
-As an alternative to the `AUX*` instructions above, a CSR-based interface such
-as the following could be used. It has the disadvantage of adding additional
-state (the `auxptr` CSR), but the advantage or lower footprint in the ISA
-space.
-
-We add the following User CSRs:
+We add the following User CSRs to provide direct access the Xaus register file:
 
     CSR Name | Priv | Description
     ----------------------------------
@@ -158,6 +94,51 @@ We add the following User CSRs:
     auxnext  |  URO | AUXNEXT(auxptr)
     auxsize  |  URW | AUXGETSL(auxptr) or AUXSETSL(auxptr)
     auxdata  |  URW | AUXRD(auxptr++) or AUXWR(auxptr++)
+
+`auxptr` is simply a pointer into the Xaux register file. The register is
+WARL and legal values are zero or any address within an Xaux region.
+
+The regions form a linked list in implementation-defined ordering. Setting
+`auxptr` to zero and reading from `auxnext` returns the base address of
+the first region, setting `auxptr` to any region and reading from `auxnext`
+returns the base address for the next region, or zero when the end of the
+list is reached. An implementation may skip over deactivated regions.
+
+Writing/reading `auxdata` writes/reads the Xaux register at `auxptr` and
+then increments `auxptr`.
+
+Context switch
+--------------
+
+To save the auxilary state and disable all accelerators during context switch,
+the OS kernel must run the following algorithm:
+
+	write(AUXPTR)
+	AUXPTR := 0
+	AUXPTR := AUXNEXT
+	while AUXPTR != 0 begin
+		if AUXSIZE != 0 begin
+			write(AUXPTR)
+			write(AUXSIZE)
+			for I := 0 .. AUXSIZE-1 begin
+				write(AUXDATA)
+			end
+			AUXSIZE := 0
+		end
+		AUXPTR := AUXNEXT
+	end
+
+And restoring the state:
+
+	p = read()
+	while not EOF begin
+		AUXPTR := read()
+		AUXSIZE := read()
+		for I := 0 .. AUXSIZE-1 begin
+			AUXDATA := read()
+		end
+	end
+	AUXPTR := p
 
 Part 3: Time-sharing accelerators between cores
 ===============================================

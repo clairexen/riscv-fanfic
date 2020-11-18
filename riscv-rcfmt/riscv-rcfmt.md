@@ -21,7 +21,8 @@ immediate.
 
 **Example Applications:**
 
-Instructions with fused postfix-add-immediate, such as mul-addi or add-addi.
+Instructions that effectively fuse an op-immediate instruction with a postfix or
+prefix binary instruction, such as multiply-immediate-add.
 
 Immediate instructions that are used frequently, but not frequently enough
 to warrant a full minor opcode in OP-IMM/OP-IMM-32, such as multiply-immediate.

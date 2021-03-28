@@ -149,7 +149,7 @@ Unlike the current Zbt draft spec, these ternary instructins use rs3" as the
 control word. This way the immediate-version of the instructions are easier to
 implement on architectures that do not support the versions with three source
 arguments, as the non-immediate arguments are still rs1" and rs2", like with any
-other instruction.
+other instruction wth two source registers.
 
 We define the following ternary operations:
 
@@ -171,7 +171,7 @@ Set rd to rs1 if rs3 is zero or to rs2 otherwise.
 **MIX rd, rs1, rs2, rs3**  
 Set each bit in rd to the value of the correspondig bit in rs1/rs2, depending on the corresponding control bit in rs3.
 
-"Rotating" in the descriptions of FSL FSR, SAP, and CUT means that shamt[0:log2(XLEN)-1] acts in the obvious way, and shamt[log2(XLEN)] effectively swaps the first and second source argument, and all further bits in the shift aount are ignored.
+"Rotating" in the descriptions of FSL FSR, SAP, and CUT means that `shamt[0:log2(XLEN)-1]` acts in the obvious way, and `shamt[log2(XLEN)]` effectively swaps the first and second source argument, and all further bits in the shift aount are ignored.
 
 We further add immediate versions of FSL, FSR, SAP, ad CUT.
 
@@ -228,7 +228,7 @@ The BFX instruction sign-extends the extracted bit-field and the BFXU instructio
 
 When called with offset=0 the BFX and BFXU instructions simply sign-extend or zero-extend the word in the LSB bits of the source operand.
 
-The bit-field place instruction places the LSB bits of rs1 in a specified range in rs2. It is equivalent to "SAPI rd, rs1, rs2, offset; CUTI rd, rs2, rd, offset+length".
+The bit-field place instruction places the LSB bits of rs1 in a specified range in rs2. It is equivalent to `SAPI rd, rs1, rs2, offset; CUTI rd, rs2, rd, offset+length`.
 
     |  3                   2        |          1                    |
     |1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
@@ -238,7 +238,6 @@ The bit-field place instruction places the LSB bits of rs1 in a specified range 
 
 With offset=0 encoding for offset=32 and len=0 encoding for len=16.
 
-When an offset larger than 32 or a length larger than 16 is required, the
-operation must be implemented as two-instruction SAPI+CUTI sequence.
+When an offset larger than 32 or a length larger than 16 is required, the operation must be implemented as two-instruction SAPI+CUTI sequence.
 
 BFX and BFXU together take up 6.3% of the c2-type encoding space, and BFP takes up 3.1% of the c3-type encoding space.

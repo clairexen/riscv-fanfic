@@ -137,7 +137,7 @@ terary instructions and c3-type versions of those instructions with an
 immediate replacing the 3rd source argument. And with Zbi containing only
 the c3-type instructions from Zbt, plus additional c3-type instructions.
 
-**Zbt:** FSL FSR, SAP, CUT, SEL, MIX, FSLI, FSRI, SAPI, CUTI
+**Zbt:** FSL FSR, SAP, CUT, MUX, MIX, FSLI, FSRI, SAPI, CUTI
 
 **Zbi:** FSLI, FSRI, SAPI, CUTI, BFX, BFXU, BFP
 
@@ -165,7 +165,7 @@ Shift And Place. This shifts the bits in rs1 left, replacing the vacancies in th
 **CUT rd, rs1, rs2, rs3**  
 Use the MSB bits from rs1 and the LSB bits from rs2, with rs3 specifying the first bit position in which to use bits from rs1, and rotating when the control word is greater than XLEN.
 
-**SEL rd, rs1, rs2, rs3**  
+**MUX rd, rs1, rs2, rs3**  
 Set rd to rs1 if rs3 is zero and to rs2 otherwise.
 
 **MIX rd, rs1, rs2, rs3**  
@@ -182,7 +182,7 @@ We further add immediate versions of FSL, FSR, SAP, ad CUT.
     | 00| rs3"|  0001 | rs2"| 00| rs1"| 11| 001 | rd" |   MISC-MEM  | FSR
     | 00| rs3"|  0010 | rs2"| 00| rs1"| 11| 001 | rd" |   MISC-MEM  | SAP
     | 00| rs3"|  0011 | rs2"| 00| rs1"| 11| 001 | rd" |   MISC-MEM  | CUT
-    | 00| rs3"|  0100 | rs2"| 00| rs1"| 11| 001 | rd" |   MISC-MEM  | SEL
+    | 00| rs3"|  0100 | rs2"| 00| rs1"| 11| 001 | rd" |   MISC-MEM  | MUX
     | 00| rs3"|  0101 | rs2"| 00| rs1"| 11| 001 | rd" |   MISC-MEM  | MIX
     |---------------------------------------------------------------|
     |     imm7    | 00| rs2"| 00| rs1"| 10| 001 | rd" |   MISC-MEM  | FSLI

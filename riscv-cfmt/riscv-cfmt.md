@@ -171,7 +171,7 @@ Set rd to rs1 if rs3 is zero and to rs2 otherwise.
 **MIX rd, rs1, rs2, rs3**  
 Set each bit in rd to the value of the correspondig bit in rs1 one rs2, depending on the corresponding control bit in rs3.
 
-"Rotating" in the descriptions of FSL FSR, SAP, and CUT above means that `shamt[0:log2(XLEN)-1]` acts in the obvious way, and `shamt[log2(XLEN)]` effectively swaps the first and second source argument, and all further bits in the shift amount are ignored.
+"Rotating" in the descriptions of FSL FSR, SAP, and CUT above means that `shamt[0:log2(XLEN)-1]` acts in the obvious way, and `shamt[log2(XLEN)]` effectively swaps the first and second source argument, and all further bits in the shift amount are ignored. (*Note: Adding rotating and non-rotating versions of these instructions would be practically free. I just didn't want to make this proposal more complicated than it already is.*)
 
 We further add immediate versions of FSL, FSR, SAP, ad CUT.
 

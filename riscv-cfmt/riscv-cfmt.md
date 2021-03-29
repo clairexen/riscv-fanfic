@@ -154,24 +154,24 @@ other instruction wth two source registers.
 We define the following ternary operations:
 
 **FSL rd, rs1, rs2, rs3**  
-Funnel Shift Left. This shifts the bits in rs1, shifting in MSB bits from rs2, and rotating when the shift amount is greater than XLEN. With the shift amount in rs3.
+Funnel Shift Left. This shifts the bits in rs1 left, shifting in MSB bits from rs2, and rotating when the shift amount is greater than XLEN. With the shift amount in rs3.
 
 **FSR rd, rs1, rs2, rs3**  
-Funnel Shift Right. This shifts the bits in rs1, shifting in LSB bits from rs2, and rotating when the shift amount is greater than XLEN. With the shift amount in rs3.
+Funnel Shift Right. This shifts the bits in rs1 right, shifting in LSB bits from rs2, and rotating when the shift amount is greater than XLEN. With the shift amount in rs3.
 
 **SAP rd, rs1, rs2, rs3**  
-Shift And Place. This shifts the bits in rs1 left, replacing the vacanies in the LSB bits with the LSB bits in rs3, and rotating when the shift aount is greater than XLEN. That is, the bits in rs3 do not move. SAP by half of XLEN is equivalent to PACK. SAP is equivaent to first shifting the 2nd operand left by XLEN-rs3, and then performing a FSL operation.
+Shift And Place. This shifts the bits in rs1 left, replacing the vacancies in the LSB bits with the LSB bits from rs2, and rotating when the shift amount is greater than XLEN. That is, unlike FSL, the bits in rs2 do not move. SAP by half of XLEN is equivalent to PACK. SAP is equivaent to first shifting the 2nd operand left by XLEN-shamt, and then performing a FSL operation.
 
 **CUT rd, rs1, rs2, rs3**  
-Use the MSB bits from rs1 and the LSB bits from rs2, with rs3 speciying the first bit position in which to use bits from rs1, and rotating when th control word is greater than XLEN.
+Use the MSB bits from rs1 and the LSB bits from rs2, with rs3 specifying the first bit position in which to use bits from rs1, and rotating when the control word is greater than XLEN.
 
 **SEL rd, rs1, rs2, rs3**  
-Set rd to rs1 if rs3 is zero or to rs2 otherwise.
+Set rd to rs1 if rs3 is zero and to rs2 otherwise.
 
 **MIX rd, rs1, rs2, rs3**  
-Set each bit in rd to the value of the correspondig bit in rs1/rs2, depending on the corresponding control bit in rs3.
+Set each bit in rd to the value of the correspondig bit in rs1 one rs2, depending on the corresponding control bit in rs3.
 
-"Rotating" in the descriptions of FSL FSR, SAP, and CUT means that `shamt[0:log2(XLEN)-1]` acts in the obvious way, and `shamt[log2(XLEN)]` effectively swaps the first and second source argument, and all further bits in the shift aount are ignored.
+"Rotating" in the descriptions of FSL FSR, SAP, and CUT above means that `shamt[0:log2(XLEN)-1]` acts in the obvious way, and `shamt[log2(XLEN)]` effectively swaps the first and second source argument, and all further bits in the shift amount are ignored.
 
 We further add immediate versions of FSL, FSR, SAP, ad CUT.
 

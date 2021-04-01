@@ -29,6 +29,12 @@ The proposed encoding space for instuctions of these types would be as follows:
     | i2| rs3"|  imm4 | rs2"| f2| rs1"| 11|  f3 | rd" |   MISC-MEM  | c4-type
     |---------------------------------------------------------------|
 
+> *Alternatively, the c2/c3/c4 instructions could be placed in the reserved
+rm=101/rm=110 space in MADD/MSUB/NMSUB/NMADD, using one major opcode for each
+of the c2/c3/c4 formats and reserving the last major opcode for 8 r4-type
+instructions. (The size of the reserved encoding space for c2/c3/c4 would be
+the same in either case.)*
+
 Using this encoding scheme we could easily reserve sufficient space for 32
 instructions of each of the three c2/c3/c4-type instructions formats, with the
 maximum 12/9/6-bit immediate. And of course more if not all immediate bits are
@@ -52,7 +58,29 @@ neded:
     |   0  | 131072 | 16384 | 2048 |
     |------|-----------------------|
 
-The example instructions and bitmanip instructions below would take up a total of 9.4% of the c2-type encoding space, 15.6% of the c3-type encoding space, and 0.3% of the c4-type encoding space.
+When an instruction does not use all immediate bits, the used immediate bits
+should be right-justified in the immediate field, leaving the upper bits to
+select an instruction. For example:
+
+    |  3                   2        |          1                    |
+    |1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
+    |---------------------------------------------------------------|
+    |          imm12        | f2| rs1"| 11|  f3 | rd" |  OP-IMM-32  | c2.12
+    |   f4  |      imm8     | f2| rs1"| 11|  f3 | rd" |  OP-IMM-32  | c2.8
+    |---------------------------------------------------------------|
+    |        imm9     | rs2"| f2| rs1"| 10|  f3 | rd" |   MISC-MEM  | c3.9
+    |   f4  |   imm5  | rs2"| f2| rs1"| 10|  f3 | rd" |   MISC-MEM  | c3.5
+    |       funct9    | rs2"| f2| rs1"| 10|  f3 | rd" |   MISC-MEM  | c3.0
+    |---------------------------------------------------------------|
+    | i2| rs3"|  imm4 | rs2"| f2| rs1"| 11|  f3 | rd" |   MISC-MEM  | c4.6
+    | f2| rs3"|  imm4 | rs2"| f2| rs1"| 11|  f3 | rd" |   MISC-MEM  | c4.4
+    | f2| rs3"| f2| i2| rs2"| f2| rs1"| 11|  f3 | rd" |   MISC-MEM  | c4.2
+    | f2| rs3"|   f4  | rs2"| f2| rs1"| 11|  f3 | rd" |   MISC-MEM  | c4.0
+    |---------------------------------------------------------------|
+
+The example instructions and bitmanip instructions below would take up a total
+of 9.4% of the c2-type encoding space, 15.6% of the c3-type encoding space,
+and 0.3% of the c4-type encoding space.
 
 
 What problems does this solve?
@@ -154,41 +182,59 @@ other instruction wth two source registers.
 We define the following ternary operations:
 
 **FSL rd, rs1, rs2, rs3**  
-Funnel Shift Left. This shifts the bits in rs1 left, shifting in MSB bits from rs2, and rotating when the shift amount is greater than XLEN. With the shift amount in rs3.
+Funnel Shift Left. This shifts the bits in rs1 left, shifting in MSB bits from
+rs2, and rotating when the shift amount is greater than XLEN. With the shift
+amount in rs3.
 
 **FSR rd, rs1, rs2, rs3**  
-Funnel Shift Right. This shifts the bits in rs1 right, shifting in LSB bits from rs2, and rotating when the shift amount is greater than XLEN. With the shift amount in rs3.
+Funnel Shift Right. This shifts the bits in rs1 right, shifting in LSB bits
+from rs2, and rotating when the shift amount is greater than XLEN. With the
+shift amount in rs3.
 
 **SAP rd, rs1, rs2, rs3**  
-Shift And Place. This shifts the bits in rs1 left, replacing the vacancies in the LSB bits with the LSB bits from rs2, and rotating when the shift amount is greater than XLEN. That is, unlike FSL, the bits in rs2 do not move. SAP by half of XLEN is equivalent to PACK. SAP is equivaent to first shifting the 2nd operand left by XLEN-shamt, and then performing a FSL operation.
+Shift And Place. This shifts the bits in rs1 left, replacing the vacancies in
+the LSB bits with the LSB bits from rs2, and rotating when the shift amount is
+greater than XLEN. That is, unlike FSL, the bits in rs2 do not move. SAP by
+half of XLEN is equivalent to PACK. SAP is equivaent to first shifting the 2nd
+operand left by XLEN-shamt, and then performing a FSL operation.
 
 **CUT rd, rs1, rs2, rs3**  
-Use the MSB bits from rs1 and the LSB bits from rs2, with rs3 specifying the first bit position in which to use bits from rs1, and rotating when the control word is greater than XLEN.
+Use the MSB bits from rs1 and the LSB bits from rs2, with rs3 specifying the
+first bit position in which to use bits from rs1, and rotating when the control
+word is greater than XLEN.
 
 **MUX rd, rs1, rs2, rs3**  
 Set rd to rs1 if rs3 is zero and to rs2 otherwise.
 
 **MIX rd, rs1, rs2, rs3**  
-Set each bit in rd to the value of the correspondig bit in rs1 one rs2, depending on the corresponding control bit in rs3.
+Set each bit in rd to the value of the correspondig bit in rs1 or rs2,
+depending on the corresponding control bit in rs3.
 
-"Rotating" in the descriptions of FSL FSR, SAP, and CUT above means that `shamt[0:log2(XLEN)-1]` acts in the obvious way, and `shamt[log2(XLEN)]` effectively swaps the first and second source argument, and all further bits in the shift amount are ignored. (*Note: Adding rotating and non-rotating versions of these instructions would be practically free. I just didn't want to make this proposal more complicated than it already is.*)
+"Rotating" in the descriptions of FSL FSR, SAP, and CUT above means that
+`shamt[0:log2(XLEN)-1]` acts in the obvious way, and `shamt[log2(XLEN)]`
+effectively swaps the first and second source argument, and all further bits in
+the shift amount are ignored.
 
-We further add immediate versions of FSL, FSR, SAP, ad CUT.
+> *Comment: Adding rotating and non-rotating versions of these instructions
+> would be practically free. I just didn't want to make this proposal more
+> complicated than it already is.*
+
+We further add immediate versions of FSR, SAP, ad CUT. (There is no need for a
+FSLI instruction as it can be emulated using FSRI)
 
     |  3                   2        |          1                    |
     |1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
     |---------------------------------------------------------------|
     | 00| rs3"|  0000 | rs2"| 00| rs1"| 11| 001 | rd" |   MISC-MEM  | FSL
-    | 00| rs3"|  0001 | rs2"| 00| rs1"| 11| 001 | rd" |   MISC-MEM  | FSR
-    | 00| rs3"|  0010 | rs2"| 00| rs1"| 11| 001 | rd" |   MISC-MEM  | SAP
-    | 00| rs3"|  0011 | rs2"| 00| rs1"| 11| 001 | rd" |   MISC-MEM  | CUT
-    | 00| rs3"|  0100 | rs2"| 00| rs1"| 11| 001 | rd" |   MISC-MEM  | MUX
-    | 00| rs3"|  0101 | rs2"| 00| rs1"| 11| 001 | rd" |   MISC-MEM  | MIX
+    | 01| rs3"|  0000 | rs2"| 00| rs1"| 11| 001 | rd" |   MISC-MEM  | FSR
+    | 10| rs3"|  0000 | rs2"| 00| rs1"| 11| 001 | rd" |   MISC-MEM  | SAP
+    | 11| rs3"|  0000 | rs2"| 00| rs1"| 11| 001 | rd" |   MISC-MEM  | CUT
+    | 00| rs3"|  0001 | rs2"| 00| rs1"| 11| 001 | rd" |   MISC-MEM  | MUX
+    | 01| rs3"|  0001 | rs2"| 00| rs1"| 11| 001 | rd" |   MISC-MEM  | MIX
     |---------------------------------------------------------------|
-    |     imm7    | 00| rs2"| 00| rs1"| 10| 001 | rd" |   MISC-MEM  | FSLI
-    |     imm7    | 01| rs2"| 00| rs1"| 10| 001 | rd" |   MISC-MEM  | FSRI
-    |     imm7    | 10| rs2"| 00| rs1"| 10| 001 | rd" |   MISC-MEM  | SAPI
-    |     imm7    | 11| rs2"| 00| rs1"| 10| 001 | rd" |   MISC-MEM  | CUTI
+    | 01|     imm7    | rs2"| 00| rs1"| 10| 001 | rd" |   MISC-MEM  | FSRI
+    | 10|     imm7    | rs2"| 00| rs1"| 10| 001 | rd" |   MISC-MEM  | SAPI
+    | 11|     imm7    | rs2"| 00| rs1"| 10| 001 | rd" |   MISC-MEM  | CUTI
     |---------------------------------------------------------------|
 
 Because of the rotating behavior of FSL/FSR/SAP/CUT the 8 LSB bits of the
@@ -207,7 +253,8 @@ The above c3-type instructions take up 3.1% of the c3-type encoding space.
 Bit-Field Instructions
 ----------------------
 
-Bit-fields are contiguous regions of bits. We define four bit-field instructions: two for bit-field extract and two for bit-field place.
+Bit-fields are contiguous regions of bits. We define four bit-field
+instructions: two for bit-field extract and two for bit-field place.
 
 The bit-field extract instructions only replace two shifts, usually a 48-bit
 sequence when compressed instructions are enabled, and a sequence that is easy

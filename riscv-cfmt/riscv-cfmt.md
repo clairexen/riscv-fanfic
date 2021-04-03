@@ -1,8 +1,8 @@
 Proposal for C2/C3/C4-type RISC-V Instruction Formats
 =====================================================
 
-This is a proposal for RISC-V 32-bit instruction formats using compressed rs1"/rs2"/rs3"/rd'
-register addressing.
+This is a proposal for RISC-V 32-bit instruction formats using compressed
+rs1"/rs2"/rs3"/rd' register addressing.
 
     |  3                   2        |          1                    |
     |1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
@@ -11,9 +11,9 @@ register addressing.
     |    funct7   |   rs2   |   rs1   |  f3 |    rd   |    opcode   | r-type
     |    rs3  | f2|   rs2   |   rs1   |  f3 |    rd   |    opcode   | r4-type
     |---------------------------------------------------------------|
-    |          imm12        | f2| rs1"|  funct5 | rd" |    opcode   | c2-type
-    |       imm9      | rs2"| f2| rs1"|  funct5 | rd" |    opcode   | c3-type
-    | i2| rs3'|  imm4 | rs2"| f2| rs1"|  funct5 | rd" |    opcode   | c4-type
+    |          imm12        | f2| rs1"|  funct5 | rd' |    opcode   | c2-type
+    |       imm9      | rs2"| f2| rs1"|  funct5 | rd' |    opcode   | c3-type
+    | i2| rs3'|  imm4 | rs2"| f2| rs1"|  funct5 | rd' |    opcode   | c4-type
     |---------------------------------------------------------------|
 
 With the rs1"/rs2"/rs3" encoding being identical to rs1'/rs2', except that 000
@@ -24,9 +24,9 @@ The proposed encoding space for instuctions of these types would be as follows:
     |  3                   2        |          1                    |
     |1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
     |---------------------------------------------------------------|
-    |          imm12        | f2| rs1"| 11|  f3 | rd" |  OP-IMM-32  | c2-type
-    |        imm9     | rs2"| f2| rs1"| 10|  f3 | rd" |   MISC-MEM  | c3-type
-    | i2| rs3"|  imm4 | rs2"| f2| rs1"| 11|  f3 | rd" |   MISC-MEM  | c4-type
+    |          imm12        | f2| rs1"| 11|  f3 | rd' |  OP-IMM-32  | c2-type
+    |        imm9     | rs2"| f2| rs1"| 10|  f3 | rd' |   MISC-MEM  | c3-type
+    | i2| rs3"|  imm4 | rs2"| f2| rs1"| 11|  f3 | rd' |   MISC-MEM  | c4-type
     |---------------------------------------------------------------|
 
 > *Alternatively, the c2/c3/c4 instructions could be placed in the reserved
@@ -65,22 +65,31 @@ select an instruction. For example:
     |  3                   2        |          1                    |
     |1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
     |---------------------------------------------------------------|
-    |          imm12        | f2| rs1"| 11|  f3 | rd" |  OP-IMM-32  | c2.12
-    |   f4  |      imm8     | f2| rs1"| 11|  f3 | rd" |  OP-IMM-32  | c2.8
+    |          imm12        | f2| rs1"| 11|  f3 | rd' |  OP-IMM-32  | c2.12
+    |   f4  |      imm8     | f2| rs1"| 11|  f3 | rd' |  OP-IMM-32  | c2.8
     |---------------------------------------------------------------|
-    |        imm9     | rs2"| f2| rs1"| 10|  f3 | rd" |   MISC-MEM  | c3.9
-    |   f4  |   imm5  | rs2"| f2| rs1"| 10|  f3 | rd" |   MISC-MEM  | c3.5
-    |       funct9    | rs2"| f2| rs1"| 10|  f3 | rd" |   MISC-MEM  | c3.0
+    |        imm9     | rs2"| f2| rs1"| 10|  f3 | rd' |   MISC-MEM  | c3.9
+    |   f4  |   imm5  | rs2"| f2| rs1"| 10|  f3 | rd' |   MISC-MEM  | c3.5
+    |       funct9    | rs2"| f2| rs1"| 10|  f3 | rd' |   MISC-MEM  | c3.0
     |---------------------------------------------------------------|
-    | i2| rs3"|  imm4 | rs2"| f2| rs1"| 11|  f3 | rd" |   MISC-MEM  | c4.6
-    | f2| rs3"|  imm4 | rs2"| f2| rs1"| 11|  f3 | rd" |   MISC-MEM  | c4.4
-    | f2| rs3"| f2| i2| rs2"| f2| rs1"| 11|  f3 | rd" |   MISC-MEM  | c4.2
-    | f2| rs3"|   f4  | rs2"| f2| rs1"| 11|  f3 | rd" |   MISC-MEM  | c4.0
+    | i2| rs3"|  imm4 | rs2"| f2| rs1"| 11|  f3 | rd' |   MISC-MEM  | c4.6
+    | f2| rs3"|  imm4 | rs2"| f2| rs1"| 11|  f3 | rd' |   MISC-MEM  | c4.4
+    | f2| rs3"| f2| i2| rs2"| f2| rs1"| 11|  f3 | rd' |   MISC-MEM  | c4.2
+    | f2| rs3"|   f4  | rs2"| f2| rs1"| 11|  f3 | rd' |   MISC-MEM  | c4.0
     |---------------------------------------------------------------|
 
 The example instructions and bitmanip instructions below would take up a total
-of 9.4% of the c2-type encoding space, 15.6% of the c3-type encoding space,
-and 0.3% of the c4-type encoding space.
+of 7% of the c2-type encoding space, 18% of the c3-type encoding space, and
+0.4% of the c4-type encoding space.
+
+              | c2 usage | c3 usage | c4 usage |
+    ----------+----------+----------+----------|
+    Examples  |    6.2%  |   12.5%  |    0.1%  |
+    Zbt       |    0.0%  |    2.3%  |    0.3%  |
+    Zbi       |    0.0%  |    2.3%  |    0.0%  |
+    Zbf       |    0.8%  |    3.1%  |    0.0%  |
+    ----------+----------+----------+----------|
+    Total     |    7.0%  |   18.0%  |    0.4%  |
 
 
 What problems does this solve?
@@ -132,10 +141,10 @@ prefix binary instruction, such as multiply-immediate-add:
     |  3                   2        |          1                    |
     |1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
     |---------------------------------------------------------------|
-    |        imm9     | rs2"| 00| rs1"| 10| 000 | rd" |   MISC-MEM  | MULIADD
-    |        imm9     | rs2"| 01| rs1"| 10| 000 | rd" |   MISC-MEM  | MULIADDW
-    |        imm9     | rs2"| 10| rs1"| 10| 000 | rd" |   MISC-MEM  | ADDIADD
-    |        imm9     | rs2"| 11| rs1"| 10| 000 | rd" |   MISC-MEM  | ADDIADDW
+    |        imm9     | rs2"| 00| rs1"| 10| 000 | rd' |   MISC-MEM  | MULIADD
+    |        imm9     | rs2"| 01| rs1"| 10| 000 | rd' |   MISC-MEM  | MULIADDW
+    |        imm9     | rs2"| 10| rs1"| 10| 000 | rd' |   MISC-MEM  | ADDIADD
+    |        imm9     | rs2"| 11| rs1"| 10| 000 | rd' |   MISC-MEM  | ADDIADDW
     |---------------------------------------------------------------|
 
 These 4 c3-type instructions would take up 12.5% of the c3-type encoding space.
@@ -145,13 +154,29 @@ Reverse-subtract-immediate:
     |  3                   2        |          1                    |
     |1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
     |---------------------------------------------------------------|
-    |          imm12        | 00| rs1"| 11| 000 | rd" |  OP-IMM-32  | RSUBI
+    |          imm12        | 00| rs1"| 11| 000 | rd' |  OP-IMM-32  | RSUBI
+    |          imm12        | 01| rs1"| 11| 000 | rd' |  OP-IMM-32  | RSUBIW
     |---------------------------------------------------------------|
 
-This c2-type instruction would take up 3.1% of the c2-type encoding space.
+These c2-type instruction would take up 6.2% of the c2-type encoding space.
 
 (No multiply-immediate will be needed if a 9-bit immediate is deemed sufficient,
 because rs2"=000 woud effectively be a multiply-immediate instructions.)
+
+Reduction operations (adding many numbers, OR-ing many numbers, etc) can
+be sped up significantly with operations that can combine three operands
+instead of just two. The most important operation here is undoubtedly
+addition. (Can also replace OR/XOR reduction in cases where OR and XOR would
+return the same results.)
+
+    |  3                   2        |          1                    |
+    |1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
+    |---------------------------------------------------------------|
+    | 00| rs3"|  0000 | rs2"| 00| rs1"| 11| 000 | rd' |   MISC-MEM  | ADD3
+    | 00| rs3"|  0000 | rs2"| 01| rs1"| 11| 000 | rd' |   MISC-MEM  | ADD3W
+    |---------------------------------------------------------------|
+
+These c4-type instruction would take up 0.1% of the c4-type encoding space.
 
 
 Bitmanip Instuctions
@@ -160,14 +185,17 @@ Bitmanip Instuctions
 This section proposes replacemnts for the Zbt and Zbf ISA extensions in the
 current BitManip spec.
 
-Instead I propose new Zbt and Zbi extensions. With Zbt containing c4-type
-terary instructions and c3-type versions of those instructions with an
+Instead I propose new Zbt, Zbi, and Zbf extensions. With Zbt containing c4-type
+terary instructions and c3-type versions of some of those instructions with an
 immediate replacing the 3rd source argument. And with Zbi containing only
-the c3-type instructions from Zbt, plus additional c3-type instructions.
+the c3-type instructions from Zbt. Zbf contains additional c3-type and c2-type
+instructions for bitfield extact and deposit.
 
-**Zbt:** FSL FSR, SAP, CUT, MUX, MIX, FSLI, FSRI, SAPI, CUTI
+**Zbt:** FSL FSR, SAP, CUT, MUX, MIX, FSRI, SAPI, CUTI
 
-**Zbi:** FSLI, FSRI, SAPI, CUTI, BFX, BFXU, BFP
+**Zbi:** FSRI, SAPI, CUTI
+
+**Zbf:** BFX, BFXU, BFP
 
 
 Ternary Instructions
@@ -225,16 +253,16 @@ FSLI instruction as it can be emulated using FSRI)
     |  3                   2        |          1                    |
     |1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
     |---------------------------------------------------------------|
-    | 00| rs3"|  0000 | rs2"| 00| rs1"| 11| 001 | rd" |   MISC-MEM  | FSL
-    | 01| rs3"|  0000 | rs2"| 00| rs1"| 11| 001 | rd" |   MISC-MEM  | FSR
-    | 10| rs3"|  0000 | rs2"| 00| rs1"| 11| 001 | rd" |   MISC-MEM  | SAP
-    | 11| rs3"|  0000 | rs2"| 00| rs1"| 11| 001 | rd" |   MISC-MEM  | CUT
-    | 00| rs3"|  0001 | rs2"| 00| rs1"| 11| 001 | rd" |   MISC-MEM  | MUX
-    | 01| rs3"|  0001 | rs2"| 00| rs1"| 11| 001 | rd" |   MISC-MEM  | MIX
+    | 00| rs3"|  0000 | rs2"| 00| rs1"| 11| 001 | rd' |   MISC-MEM  | FSL
+    | 01| rs3"|  0000 | rs2"| 00| rs1"| 11| 001 | rd' |   MISC-MEM  | FSR
+    | 10| rs3"|  0000 | rs2"| 00| rs1"| 11| 001 | rd' |   MISC-MEM  | SAP
+    | 11| rs3"|  0000 | rs2"| 00| rs1"| 11| 001 | rd' |   MISC-MEM  | CUT
+    | 00| rs3"|  0001 | rs2"| 00| rs1"| 11| 001 | rd' |   MISC-MEM  | MUX
+    | 01| rs3"|  0001 | rs2"| 00| rs1"| 11| 001 | rd' |   MISC-MEM  | MIX
     |---------------------------------------------------------------|
-    | 01|     imm7    | rs2"| 00| rs1"| 10| 001 | rd" |   MISC-MEM  | FSRI
-    | 10|     imm7    | rs2"| 00| rs1"| 10| 001 | rd" |   MISC-MEM  | SAPI
-    | 11|     imm7    | rs2"| 00| rs1"| 10| 001 | rd" |   MISC-MEM  | CUTI
+    | 01|     imm7    | rs2"| 00| rs1"| 10| 001 | rd' |   MISC-MEM  | FSRI
+    | 10|     imm7    | rs2"| 00| rs1"| 10| 001 | rd' |   MISC-MEM  | SAPI
+    | 11|     imm7    | rs2"| 00| rs1"| 10| 001 | rd' |   MISC-MEM  | CUTI
     |---------------------------------------------------------------|
 
 Because of the rotating behavior of FSL/FSR/SAP/CUT the 8 LSB bits of the
@@ -247,44 +275,56 @@ imm7 are always zero on RV32.
 
 The above c4-type instructions take up 0.3% of the c4-type encoding space.
 
-The above c3-type instructions take up 3.1% of the c3-type encoding space.
+The above c3-type instructions take up 2.3% of the c3-type encoding space.
 
 
 Bit-Field Instructions
 ----------------------
 
-Bit-fields are contiguous regions of bits. We define four bit-field
-instructions: two for bit-field extract and two for bit-field place.
+Bit-fields are contiguous regions of bits. We define three bit-field
+instructions: two for bit-field extract and one for bit-field place.
 
-The bit-field extract instructions only replace two shifts, usually a 48-bit
+The bit-field-extract (BFX) instructions only replace two shifts, usually a 48-bit
 sequence when compressed instructions are enabled, and a sequence that is easy
-to fuse. But on small machines that can not fuse such sequences, an explicit
-bit-field extract instruction can noticably improve perfomance, and in code with
-lots of bit-field extracts it can noticably iprove code size.
+to fuse. But on small machines that can not fuse such sequences, and in many
+cases also do not support compressed instuctions, an explicit bit-field extract
+instruction can noticably improve perfomance, and in code with lots of
+bit-field extracts it can noticably improve code size.
 
     |  3                   2        |          1                    |
     |1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
     |---------------------------------------------------------------|
-    |   offset  |   length  | 00| rs1"| 11| 001 | rd" |  OP-IMM-32  | BFX
-    |   offset  |   length  | 01| rs1"| 11| 001 | rd" |  OP-IMM-32  | BFXU
+    | 010 |  offset |  len  | 01| rs1"| 11| 001 | rd' |  OP-IMM-32  | BFX
+    | 000 |  offset |  len  | 01| rs1"| 11| 001 | rd' |  OP-IMM-32  | BFXU
     |---------------------------------------------------------------|
 
-With length=0 encoding for length=64. (Note that offset and length are only 6-bit wide, insufficient for full 128-bit bit-field extract on RV128.)
+With len=0 encoding for len=16.
 
-The BFX instruction sign-extends the extracted bit-field and the BFXU instruction zero-extends the extracted bit-field.
+When an offset larger than 31 or a length larger than 16 is required, the
+operation must be implemented as two-instruction SLLI+SRAI or SLLI+SRLI
+sequence.
 
-When called with offset=0 the BFX and BFXU instructions simply sign-extend or zero-extend the word in the LSB bits of the source operand.
+The BFX instruction sign-extends the extracted bit-field and the BFXU
+instruction zero-extends the extracted bit-field.
 
-The bit-field place instruction places the LSB bits of rs1 in a specified range in rs2. It is equivalent to `SAPI rd, rs1, rs2, offset; CUTI rd, rs2, rd, offset+length`.
+When called with offset=0 the BFX and BFXU instructions simply sign-extend or
+zero-extend the word in the LSB bits of the source operand.
+
+The bit-field-place (BFP) instruction places the LSB bits of rs1 in a specified
+range in rs2. It is equivalent to `SAPI rd, rs1, rs2, offset; CUTI rd, rs2, rd,
+offset+length`.
 
     |  3                   2        |          1                    |
     |1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6|5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0|
     |---------------------------------------------------------------|
-    |  offset |  len  | rs2"| f2| rs1"| 10|  f3 | rd" |   MISC-MEM  | BFP
+    |  offset |  len  | rs2"| 01| rs1"| 10| 001 | rd' |   MISC-MEM  | BFP
     |---------------------------------------------------------------|
 
 With offset=0 encoding for offset=32 and len=0 encoding for len=16.
 
-When an offset larger than 32 or a length larger than 16 is required, the operation must be implemented as two-instruction SAPI+CUTI sequence.
+When an offset larger than 32 or a length larger than 16 is required, the
+operation must be implemented as two-instruction SAPI+CUTI sequence if
+Zbi/Zbt is available, or larger sequences otherwiser.
 
-BFX and BFXU together take up 6.3% of the c2-type encoding space, and BFP takes up 3.1% of the c3-type encoding space.
+BFX and BFXU together take up 0.8% of the c2-type encoding space, and BFP takes
+up 3.1% of the c3-type encoding space.
